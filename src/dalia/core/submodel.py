@@ -39,7 +39,6 @@ class SubModel(ABC):
         except FileNotFoundError:
             self.x_initial: NDArray = xp.zeros((self.a.shape[1]), dtype=float)
 
-
     @abstractmethod
     def construct_Q_prior(self, **kwargs) -> sp.sparse.coo_matrix:
         """Construct the prior precision matrix."""

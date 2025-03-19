@@ -34,6 +34,8 @@ from dalia.submodels import (
 from dalia.utils import scaled_logit, add_str_header, boxify
 
 
+
+
 class Model(ABC):
     """Core class for statistical models."""
 
@@ -497,6 +499,7 @@ class Model(ABC):
             likelihood = self.likelihood.evaluate_likelihood(
                 eta, self.y, theta=self.theta[self.hyperparameters_idx[-1] :]
             )
+
 
         return likelihood
 

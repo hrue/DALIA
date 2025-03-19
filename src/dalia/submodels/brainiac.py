@@ -53,7 +53,6 @@ class BrainiacSubModel(SubModel):
         ), f"Numbers rows in z ({self.z.shape[0]}) must match number of columns in a ({self.a.shape[1]})."
 
     def rescale_hyperparameters_to_interpret(self, **kwargs) -> NDArray:
-
         h2_scaled = kwargs.get("h2")
         # rescale h2 to (0,1) as it's currently between -INF:+INF
         h2 = scaled_logit(h2_scaled, direction="backward")
@@ -86,20 +85,18 @@ class BrainiacSubModel(SubModel):
 
         return Q_prior.tocoo()
 
-    def evaluate_likelihood(
-        self, eta: NDArray, y: NDArray, **kwargs
-    ) -> float:
+    def evaluate_likelihood(self, eta: NDArray, y: NDArray, **kwargs) -> float:
         n_observations = y.shape[0]
 
         h2_scaled = kwargs.get("h2")
         # rescale h2 to (0,1) as it's currently between -INF:+INF
         h2 = scaled_logit(h2_scaled, direction="backward")
-        if(h2 == 1):
+        if h2 == 1:
             raise ValueError("h2 is 1. Will lead to division by zero.")
 
         yEta = y - eta
         likelihood: float = (
-            0.5 *  - np.log(1 - h2)  * n_observations - 0.5 / (1 - h2) * yEta.T @ yEta
+            0.5 * -np.log(1 - h2) * n_observations - 0.5 / (1 - h2) * yEta.T @ yEta
         )
 
         return likelihood
@@ -108,10 +105,10 @@ class BrainiacSubModel(SubModel):
         self, eta: NDArray, y: NDArray, **kwargs
     ) -> NDArray:
         h2_scaled = kwargs.get("h2")
-        
+
         # rescale h2 to (0,1) as it's currently between -INF:+INF
         h2 = scaled_logit(h2_scaled, direction="backward")
-        if(h2 == 1):
+        if h2 == 1:
             raise ValueError("h2 is 1. Will lead to division by zero.")
 
         gradient = -1 / (1 - h2) * (eta - y)
@@ -123,7 +120,7 @@ class BrainiacSubModel(SubModel):
         # rescale h2 to (0,1) as it's currently between -INF:+INF
         h2 = scaled_logit(h2_scaled, direction="backward")
 
-        if(h2 == 1):
+        if h2 == 1:
             raise ValueError("h2 is 1. Will lead to division by zero.")
         d_matrix = -1 / (1 - h2) * sp.sparse.eye(self.a.shape[0])
 

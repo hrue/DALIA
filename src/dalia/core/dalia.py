@@ -345,12 +345,15 @@ class DALIA:
             # Only run the inner iteration
             print_msg("No hyperparameters, just running inner iteration.")
             self.f_value = self._evaluate_f(self.model.theta)
-
             self.minimization_result: dict = {
                 "theta": self.model.theta,
                 "x": self.model.x,  # [self.model.inverse_permutation_latent_variables],
                 "f": self.f_value,
             }
+
+            # original order and parametrization
+            # minimization_result: dict = {
+
         else:
             print_msg("Starting optimization.")
             self.iter = 0

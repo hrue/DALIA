@@ -1,26 +1,28 @@
 import os
+import time
 
+# import matplotlib.pyplot as plt
 import numpy as np
-import scipy.sparse as sp
+import scipy.sparse as scsp
 
 from dalia.configs import likelihood_config, dalia_config, submodels_config
 from dalia.core.model import Model
 from dalia.core.dalia import DALIA
 from dalia.submodels import BrainiacSubModel
-from dalia.utils import scaled_logit
+from dalia.utils import xp, print_msg
 
 path = os.path.dirname(__file__)
 
 if __name__ == "__main__":
-    base_dir = os.path.dirname(os.path.abspath(__file__))
+    base_dir = os.path.dirname(os.path.abspath(__file__)) + "/inputs_brainiac_cmPRS"
 
-    b = 2  # number of latent variables (number of features)
     m = 2  # number of annotations per feature
+    b = 20000  # number of latent variables / number of features
     sigma_a2 = 1.0 / 1.0
-    precision_mat = sigma_a2 * np.eye(m)
+    precision_mat = sigma_a2 * scsp.eye(m)
 
-    theta_ref = np.load(f"{base_dir}/inputs_brainiac/theta_original.npy")
-    x_ref = np.load(f"{base_dir}/inputs_brainiac/beta_original.npy")
+    theta_ref = xp.load(f"{base_dir}/theta_original.npy")
+    x_ref = xp.load(f"{base_dir}/beta_original.npy")
 
     initial_h2 = theta_ref[0]
     initial_alpha = theta_ref[1:]
@@ -33,8 +35,8 @@ if __name__ == "__main__":
         "ph_h2": {"type": "beta", "alpha": 5.0, "beta": 1.0},
         "ph_alpha": {
             "type": "gaussian_mvn",
-            "mean": np.asarray(theta_ref[1:]),
-            "precision": sp.csr_matrix(precision_mat),
+            "mean": theta_ref[1:],
+            "precision": precision_mat,  # sp.sparse.csc_matrix(precision_mat),
         },
     }
     brainiac = BrainiacSubModel(
@@ -52,12 +54,9 @@ if __name__ == "__main__":
 
     print(model)
 
-    # check dimensions
-    if model.submodels[0].z.shape[0] != b or model.submodels[0].z.shape[1] != m:
-        raise ValueError("Dimension mismatch in Z matrix.")
-
     print("Model initialized.")
 
+<<<<<<< HEAD
     print("model.theta", model.theta)
     print("length(model.theta)", len(model.theta))
     print("model.theta_keys", model.theta_keys)
@@ -98,10 +97,13 @@ if __name__ == "__main__":
 
     dalia_dict = {
         # "solver": {"type": "serinv"},
+=======
+    pyinla_dict = {
+>>>>>>> 52192c0 (light cleanup)
         "solver": {"type": "dense"},
         "minimize": {
-            "max_iter": 10,
-            "gtol": 1e-2,
+            "max_iter": 50,
+            "gtol": 1e-3,
             "disp": True,
         },
         "inner_iteration_max_iter": 50,
@@ -114,6 +116,7 @@ if __name__ == "__main__":
         config=dalia_config.parse_config(dalia_dict),
     )
 
+<<<<<<< HEAD
     print("x ref: ", x_ref)
     # minimization_result = dalia.minimize()
 
@@ -133,29 +136,22 @@ if __name__ == "__main__":
 
     results = dalia.run()
 
+=======
+    tic = time.time()
+    minimization_result = pyinla.run()
+    toc = time.time()
+    print("Elapsed time pyinla.run(): ", toc - tic)
+
+    print("\n------ Compare to reference solution ------\n")
+>>>>>>> 52192c0 (light cleanup)
     print("theta_ref: ", theta_ref)
-    theta = results["theta"]
-    # rescale
-    theta[0] = scaled_logit(theta[0], direction="backward")
-    print("theta:     ", theta)
-    print(
-        "norm(theta_ref - minimization_result['theta']) = ",
-        np.linalg.norm(theta_ref - results["theta"]),
-    )
 
-    # print("results['theta']: ", results["theta"])
-    # print("results['f']: ", results["f"])
-    # print("results['grad_f']: ", results["grad_f"])
-    print("cov_theta: \n", results["cov_theta"])
-    print(
-        "marginal standard deviations of the hyperparameters: ",
-        np.sqrt(results["cov_theta"].diagonal()),
-    )
-    print("mean of the latent parameters : ", results["x"])
-    print(
-        "marginal variances of the latent parameters: ",
-        results["marginal_variances_latent"],
-    )
+    theta = minimization_result["theta_interpret"]
+    print("theta_interpret:", theta)
 
-    print("norm(theta - theta_ref): ", np.linalg.norm(results["theta"] - theta_ref))
-    print("norm(x - x_ref): ", np.linalg.norm(results["x"] - x_ref))
+    x = minimization_result["x"]
+    print("norm(x_ref - x) = ", np.linalg.norm(x_ref - x))
+
+    # print Hessian mode
+
+    # marginal variances latent parameters
