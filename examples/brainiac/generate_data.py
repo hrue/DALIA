@@ -103,3 +103,4 @@ if __name__ == "__main__":
     print("beta recovered: ", beta_recovered.flatten())
     print("beta original : ", beta.flatten())
     print("norm(diff) : ", np.linalg.norm(beta_recovered - beta))
+
