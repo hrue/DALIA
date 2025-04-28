@@ -33,7 +33,12 @@ class DenseSolver(Solver):
         self.A_inv = None
 
     def cholesky(self, A: NDArray, **kwargs) -> None:
-        self.L[:] = A.todense()
+
+        if sp.sparse.issparse(A):
+            self.L[:] = A.todense()
+        else:
+            ## TODO: can we safely overwrite A?!
+            self.L[:] = A
 
         self.L = xp.linalg.cholesky(self.L)
 

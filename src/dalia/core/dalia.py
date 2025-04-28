@@ -346,13 +346,11 @@ class DALIA:
             print_msg("No hyperparameters, just running inner iteration.")
             self.f_value = self._evaluate_f(self.model.theta)
             self.minimization_result: dict = {
-                "theta": self.model.theta,
+                #"theta": self.model.theta,
+                "theta_interpret": self.model.get_theta_interpret(),
                 "x": self.model.x,  # [self.model.inverse_permutation_latent_variables],
                 "f": self.f_value,
             }
-
-            # original order and parametrization
-            # minimization_result: dict = {
 
         else:
             print_msg("Starting optimization.")
@@ -501,7 +499,8 @@ class DALIA:
                 )
 
             self.minimization_result: dict = {
-                "theta": scipy_result.x,
+                # "theta": scipy_result.x,
+                "theta_interpret": self.model.get_theta_interpret(),
                 "x": get_host(
                     self.model.x,  # [self.model.inverse_permutation_latent_variables]
                 ),
@@ -627,6 +626,7 @@ class DALIA:
         hyperparameters, log likelihood, log prior of the latent parameters,
         and log conditional of the latent parameters.
         """
+
         self.model.theta[:] = theta_i
         f_theta = xp.zeros(1, dtype=xp.float64)
 

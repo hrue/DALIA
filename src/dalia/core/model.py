@@ -193,6 +193,9 @@ class Model(ABC):
             lh_hyperparameters_keys,
         ) = likelihood_config.read_hyperparameters()
 
+        ## TODO: cant do that because we call self.hyperparameters_idx[-1] but im not sure what makes more sense ...
+        #self.hyperparameters_idx[-1] += len(lh_hyperparameters)
+
         theta.append(lh_hyperparameters)
         self.theta: NDArray = xp.concatenate(theta)
 
@@ -211,33 +214,59 @@ class Model(ABC):
 
         self.x: NDArray = xp.zeros(self.n_latent_parameters)
 
-        data = []
-        rows = []
-        cols = []
+        # check if all a are sparse -> if not construct dense a
+        a_is_sparse = True
         for i, submodel in enumerate(self.submodels):
-            # Convert csc_matrix to coo_matrix to allow slicing
-            coo_submodel_a = submodel.a.tocoo()
-            data.append(coo_submodel_a.data)
-            rows.append(coo_submodel_a.row)
-            cols.append(
-                coo_submodel_a.col
-                + self.latent_parameters_idx[i]
-                * xp.ones(coo_submodel_a.col.size, dtype=int)
+            if not sp.sparse.issparse(submodel.a):
+                a_is_sparse = False
+                break
+
+        if a_is_sparse:
+            data = []
+            rows = []
+            cols = []
+            for i, submodel in enumerate(self.submodels):
+                # Convert csc_matrix to coo_matrix to allow slicing
+                coo_submodel_a = submodel.a.tocoo()
+                data.append(coo_submodel_a.data)
+                rows.append(coo_submodel_a.row)
+                cols.append(
+                    coo_submodel_a.col
+                    + self.latent_parameters_idx[i]
+                    * xp.ones(coo_submodel_a.col.size, dtype=int)
+                )
+
+                self.x[
+                    self.latent_parameters_idx[i] : self.latent_parameters_idx[i + 1]
+                ] = submodel.x_initial
+
+            self.a: spmatrix = sp.sparse.coo_matrix(
+                (xp.concatenate(data), (xp.concatenate(rows), xp.concatenate(cols))),
+                shape=(submodel.a.shape[0], self.n_latent_parameters),
             )
+        else: 
+            data = []
+            for i, submodel in enumerate(self.submodels):
+                if sp.sparse.issparse(submodel.a):
+                    data.append(submodel.a.toarray())
+                else:
+                    data.append(submodel.a)
 
-            self.x[
-                self.latent_parameters_idx[i] : self.latent_parameters_idx[i + 1]
-            ] = submodel.x_initial
+                self.x[
+                    self.latent_parameters_idx[i] : self.latent_parameters_idx[i + 1]
+                ] = submodel.x_initial
 
-        self.a: sp.sparse.spmatrix = sp.sparse.coo_matrix(
-            (xp.concatenate(data), (xp.concatenate(rows), xp.concatenate(cols))),
-            shape=(submodel.a.shape[0], self.n_latent_parameters),
-        )
 
         # TODO: not so efficient ...
         self.permutation_latent_variables = xp.arange(self.n_latent_parameters)
         self.inverse_permutation_latent_variables = xp.arange(self.n_latent_parameters)
-
+                
+        # if data is gaussian compute t(A)*A once
+        if likelihood_config.type == "gaussian":
+            self.aTa = self.a.T @ self.a
+        else:
+            self.aTa = None
+        
         # --- Load observation vector
         input_dir = Path(
             kwargs.get("input_dir", os.path.dirname(submodels[0].config.input_dir))
@@ -386,7 +415,7 @@ class Model(ABC):
     def construct_Q_conditional(
         self,
         eta: NDArray,
-    ) -> float:
+    ):
         """Construct the conditional precision matrix.
 
         Note
@@ -420,7 +449,21 @@ class Model(ABC):
             # General rules
             d_matrix = self.likelihood.evaluate_hessian_likelihood(**kwargs)
 
-        self.Q_conditional = self.Q_prior - self.a.T @ d_matrix @ self.a
+        ## TODO: i know its ugly ... sorry ...
+        # if self.a is sparse -> Q_conditional should be sparse, else dense
+        if sp.sparse.issparse(self.a):
+            if self.aTa is not None:
+                self.Q_conditional = self.Q_prior - d_matrix.diagonal()[0] * self.aTa
+            else:
+                self.Q_conditional = self.Q_prior - self.a.T @ d_matrix @ self.a
+            #self.Q_conditional = self.Q_prior - self.a.T @ d_matrix @ self.a
+        else:
+            if self.aTa is not None:
+                self.Q_conditional = self.Q_prior.toarray() -  d_matrix.diagonal()[0] * self.aTa
+            else:
+                self.Q_conditional = self.Q_prior.toarray() - self.a.T @ d_matrix @ self.a
+            #self.Q_conditional = self.Q_prior.toarray() - self.a.T @ d_matrix @ self.a
+
 
         return self.Q_conditional
 
@@ -488,6 +531,8 @@ class Model(ABC):
             theta_likelihood = self.theta[self.hyperparameters_idx[-1] :]
 
         return theta_likelihood
+    
+    def get_theta_interpret(self) -> NDArray:
 
     def evaluate_likelihood(self, eta: NDArray, **kwargs) -> float:
         """Evaluate the likelihood."""
@@ -499,7 +544,6 @@ class Model(ABC):
             likelihood = self.likelihood.evaluate_likelihood(
                 eta, self.y, theta=self.theta[self.hyperparameters_idx[-1] :]
             )
-
 
         return likelihood
 
