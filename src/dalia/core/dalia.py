@@ -626,6 +626,8 @@ class DALIA:
         hyperparameters, log likelihood, log prior of the latent parameters,
         and log conditional of the latent parameters.
         """
+        import time 
+        tic = time.time()
 
         self.model.theta[:] = theta_i
         f_theta = xp.zeros(1, dtype=xp.float64)

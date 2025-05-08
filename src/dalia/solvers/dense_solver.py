@@ -4,6 +4,12 @@ from dalia import NDArray, sp, xp
 from dalia.configs.dalia_config import SolverConfig
 from dalia.core.solver import Solver
 
+## check if sparse matrix is diagonal 
+def is_diagonal(A: NDArray) -> bool:
+    """Check if a matrix is diagonal."""
+
+    coo = A.tocoo()
+    return xp.all(coo.row == coo.col)
 
 class DenseSolver(Solver):
     def __init__(
@@ -35,7 +41,17 @@ class DenseSolver(Solver):
     def cholesky(self, A: NDArray, **kwargs) -> None:
 
         if sp.sparse.issparse(A):
-            self.L[:] = A.todense()
+
+            ## TODO: where should this go in the long term?
+            if is_diagonal(A):
+                # if A is diagonal, we can use the diagonal directly
+                self.L[:] = 0
+                #self.L.diagonal()[:] = xp.sqrt(A.diagonal())
+                self.L[xp.arange(self.n), xp.arange(self.n)] = xp.sqrt(A.diagonal())
+                return
+
+            else:    
+                self.L[:] = A.todense()
         else:
             ## TODO: can we safely overwrite A?!
             self.L[:] = A
@@ -82,3 +98,4 @@ class DenseSolver(Solver):
         solver_mem = 2 * self.n * self.n * xp.dtype(xp.float64).itemsize
 
         return solver_mem
+
