@@ -1,7 +1,7 @@
 # Copyright 2024-2025 DALIA authors. All rights reserved.
 import scipy.stats as stats
 
-
+from dalia import sp, xp
 from dalia.configs.priorhyperparameters_config import (
     GaussianPriorHyperparametersConfig,
 )
@@ -29,5 +29,15 @@ class BetaPriorHyperparameters(PriorHyperparameters):
                 "Beta distribution is defined on the interval [0, 1]. theta: {theta}"
             )
 
-        log_prior = stats.beta.logpdf(theta, self.alpha, self.beta)
+        log_beta = (
+            sp.special.gammaln(self.alpha)
+            + sp.special.gammaln(self.beta)
+            - sp.special.gammaln(self.alpha + self.beta)
+        )
+        log_prior = (
+            (self.alpha - 1) * xp.log(theta)
+            + (self.beta - 1) * xp.log(1 - theta)
+            - log_beta
+        )
+
         return log_prior

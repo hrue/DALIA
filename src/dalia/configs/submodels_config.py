@@ -23,7 +23,8 @@ class SubModelConfig(BaseModel, ABC):
     type: Literal["spatio_temporal", "spatial", "regression", "brainiac"] = None
 
     @abstractmethod
-    def read_hyperparameters(self) -> tuple[ArrayLike, list]: ...
+    def read_hyperparameters(self) -> tuple[ArrayLike, list]:
+        ...
 
 
 class RegressionSubModelConfig(SubModelConfig):
@@ -72,25 +73,25 @@ class SpatialSubModelConfig(SubModelConfig):
         return theta, theta_keys
 
 
-class TemporalSubModelConfig(SubModelConfig): ...
+class TemporalSubModelConfig(SubModelConfig):
+    ...
 
 
 class BrainiacSubModelConfig(SubModelConfig):
     # --- Hyperparameters ---
     h2: float = None
     h2_scaled: float = None
-    alpha: NDArray = None 
+    alpha: NDArray = None
 
     # --- Prior hyperparameters ---
     ph_h2: BetaPriorHyperparametersConfig = None
     ph_alpha: GaussianMVNPriorHyperparametersConfig = None
 
     def read_hyperparameters(self):
-
         # input of h2 is in (0,1), rescale to -/+ INF
         self.h2_scaled = scaled_logit(self.h2, direction="forward")
 
-        theta = xp.concatenate(([self.h2_scaled], self.alpha))
+        theta = xp.concatenate((xp.array([self.h2_scaled]), self.alpha))
         theta_keys = ["h2"] + [f"alpha_{i}" for i in range(len(self.alpha))]
 
         return theta, theta_keys
