@@ -74,7 +74,6 @@ class DenseSolver(Solver):
 
     def get_solver_memory(self) -> int:
         """Return the memory used by the solver in number of bytes."""
-        if self.A_inv == None:
-            return self.L.nbytes
-        else:
-            return self.L.nbytes + self.A_inv.nbytes
+        solver_mem = 2 * self.n * self.n * xp.dtype(xp.float64).itemsize
+
+        return solver_mem

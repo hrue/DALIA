@@ -1,7 +1,7 @@
 import sys
 import os
 
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(parent_dir)
 
 import numpy as np
@@ -15,7 +15,6 @@ from pyinla.utils import get_host, print_msg, extract_diagonal
 from examples_utils.parser_utils import parse_args
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
 
 if __name__ == "__main__":
     print_msg("--- Example: Gaussian spatio-temporal model with regression ---")
@@ -89,6 +88,7 @@ if __name__ == "__main__":
         config=pyinla_config.parse_config(pyinla_dict),
     )
 
+<<<<<<< HEAD
     # print_msg("\n--- References ---")
     theta_ref = xp.array(np.load(f"{BASE_DIR}/reference_outputs/theta_ref.npy"))
     x_ref = xp.array(np.load(f"{BASE_DIR}/reference_outputs/x_ref.npy"))
@@ -119,25 +119,28 @@ if __name__ == "__main__":
     print("difference in x_ref:", np.linalg.norm(x_ref[:460] - x_ref_check[:460]))
     exit()
 
+=======
+>>>>>>> a4e3b95216fb0d343471502ad00844fbef1521c4
     results = pyinla.run()
-    
+
     print_msg("\n--- Results ---")
     print_msg("Theta values:\n", results["theta"])
     print_msg("Covariance of theta:\n", results["cov_theta"])
     print_msg(
         "Mean of the fixed effects:\n",
-        results["x"][-model.submodels[-1].n_fixed_effects:],
+        results["x"][-model.submodels[-1].n_fixed_effects :],
     )
 
     print_msg("\n--- Comparisons ---")
-
     # Compare hyperparameters
+    theta_ref = np.load(f"{BASE_DIR}/reference_outputs/theta_ref.npy")
     print_msg(
         "Norm (theta - theta_ref):        ",
         f"{np.linalg.norm(results['theta'] - get_host(theta_ref)):.4e}",
     )
 
     # Compare latent parameters
+    x_ref = np.load(f"{BASE_DIR}/reference_outputs/x_ref.npy")
     print_msg(
         "Norm (x - x_ref):                ",
         f"{np.linalg.norm(results['x'] - get_host(x_ref)):.4e}",

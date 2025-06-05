@@ -906,7 +906,7 @@ class PyINLA:
         eigvals = xp.linalg.eigvalsh(hess)
 
         if xp.any(eigvals < 0):
-            print(f"Negative eigenvalues detected: {eigvals}")
+            print_msg(f"Negative eigenvalues detected: {eigvals}")
 
         return hess
 

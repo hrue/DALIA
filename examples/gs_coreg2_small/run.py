@@ -1,7 +1,7 @@
 import sys
 import os
 
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(parent_dir)
 
 import numpy as np
@@ -26,7 +26,9 @@ np.random.seed(SEED)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 if __name__ == "__main__":
-    print_msg("--- Example: Gaussian Coregional (2 variates) spatial model with regression ---")
+    print_msg(
+        "--- Example: Gaussian Coregional (2 variates) spatial model with regression ---"
+    )
 
     # Check for parsed parameters
     args = parse_args()
@@ -41,14 +43,7 @@ if __name__ == "__main__":
 
     theta_ref_file = f"{BASE_DIR}/inputs_nv{nv}_ns{ns}_nt{nt}_nb{nb}/reference_outputs/theta_interpretS_original_pyINLA_perm_{dim_theta}_1.dat"
     theta_ref = np.loadtxt(theta_ref_file)
-
     theta_initial = theta_ref + 0.3 * np.random.randn(dim_theta)
-
-    x_ref_file = f"{BASE_DIR}/inputs_nv{nv}_ns{ns}_nt{nt}_nb{nb}/reference_outputs/x_ref_{n}_1.dat"
-    x_ref = xp.loadtxt(x_ref_file)
-    print_msg(f"Reference x[-5:]: {x_ref[-5:]}")
-
-    fixed_effects_ref = xp.array([-3.0, 8.0])
 
     # Configurations of the submodels for the first model
     # . Spatial submodel 1
@@ -175,8 +170,6 @@ if __name__ == "__main__":
     exit()
     # TODO: From here, to be curated
 
-
-
     pyinla.model.theta = xp.array(theta_ref)
     x = xp.zeros_like(pyinla.model.x)
     Qprior = pyinla.model.construct_Q_prior()
@@ -187,6 +180,8 @@ if __name__ == "__main__":
     pyinla.solver.cholesky(Qcond)
     x_est = pyinla.solver.solve(rhs_copy)
     print_msg("x_est: ", x_est[-nb:])
+
+    fixed_effects_ref = xp.array([-3.0, 8.0])
     print_msg("fixed effects ref: ", fixed_effects_ref)
 
     exit()
@@ -200,6 +195,9 @@ if __name__ == "__main__":
 
     print_msg("x[-nb:]: ", pyinla.model.x[-nb:])
     print_msg("fixed effects ref: ", fixed_effects_ref)
+
+    x_ref_file = f"{BASE_DIR}/inputs_nv{nv}_ns{ns}_nt{nt}_nb{nb}/reference_outputs/x_ref_{n}_1.dat"
+    x_ref = xp.loadtxt(x_ref_file)
 
     # cov_theta = pyinla.compute_covariance_hp(coreg_model.theta)
     # print_msg("covariance hyperparameters(coreg_model.theta): \n", cov_theta)

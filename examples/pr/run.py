@@ -1,4 +1,8 @@
+import sys
 import os
+
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(parent_dir)
 
 from pyinla.configs import likelihood_config, pyinla_config, submodels_config
 from pyinla.core.model import Model
@@ -6,12 +10,24 @@ from pyinla.core.pyinla import PyINLA
 from pyinla.submodels import RegressionSubModel
 from pyinla.utils import print_msg
 from pyinla import xp
+from examples_utils.parser_utils import parse_args
 
+<<<<<<< HEAD
 path = os.path.dirname(__file__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 if __name__ == "__main__":
+=======
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+if __name__ == "__main__":
+    print_msg("--- Example: Poisson Regression ---")
+>>>>>>> a4e3b95216fb0d343471502ad00844fbef1521c4
+
+    # Check for parsed parameters
+    args = parse_args()
+
+    # Configurations of the regression submodel
     regression_dict = {
         "type": "regression",
         "input_dir": f"{BASE_DIR}/inputs",
@@ -21,7 +37,7 @@ if __name__ == "__main__":
     regression = RegressionSubModel(
         config=submodels_config.parse_config(regression_dict),
     )
-
+    # Likelihood
     likelihood_dict = {
         "type": "poisson",
         "input_dir": f"{BASE_DIR}",
@@ -33,11 +49,14 @@ if __name__ == "__main__":
 
     print_msg(model)
 
-    print_msg("Submodules initialized.")
-
+    # Configurations of PyINLA
     pyinla_dict = {
         "solver": {"type": "dense"},
-        "minimize": {"max_iter": 50, "gtol": 1e-1, "disp": True},
+        "minimize": {
+            "max_iter": args.max_iter,
+            "gtol": 1e-1,
+            "disp": True,
+        },
         "inner_iteration_max_iter": 50,
         "eps_inner_iteration": 1e-3,
         "eps_gradient_f": 1e-3,
@@ -54,13 +73,17 @@ if __name__ == "__main__":
     print_msg("Theta values:\n", minimization_result["theta"])
     print_msg(
         "Mean of the fixed effects:\n",
-        minimization_result["x"][-model.submodels[-1].n_fixed_effects:],
+        minimization_result["x"][-model.submodels[-1].n_fixed_effects :],
     )
 
     print_msg("\n--- Comparisons ---")
+<<<<<<< HEAD
     x_ref = xp.load(f"{BASE_DIR}/reference_outputs/x_ref.npy")
 
+=======
+>>>>>>> a4e3b95216fb0d343471502ad00844fbef1521c4
     # Compare latent parameters
+    x_ref = xp.load(f"{BASE_DIR}/reference_outputs/x_ref.npy")
     print_msg(
         "Norm (x - x_ref):                ",
         f"{xp.linalg.norm(minimization_result['x'] - x_ref):.4e}",
