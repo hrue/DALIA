@@ -44,11 +44,7 @@ if __name__ == "__main__":
 
     theta_initial = theta_ref + 0.3 * np.random.randn(dim_theta)
 
-    x_ref_file = f"{BASE_DIR}/inputs_nv{nv}_ns{ns}_nt{nt}_nb{nb}/reference_outputs/x_ref_{n}_1.dat"
-    x_ref = xp.loadtxt(x_ref_file)
-    print_msg(f"Reference x[-5:]: {x_ref[-5:]}")
-
-    fixed_effects_ref = xp.array([3.0, -8.0, -12.0])
+    
 
     
     # Configurations of the submodels for the first model
@@ -231,6 +227,8 @@ if __name__ == "__main__":
     pyinla.solver.cholesky(Qcond)
     x_est = pyinla.solver.solve(rhs_copy)
     print_msg("x_est: ", x_est[-nb:])
+
+    fixed_effects_ref = xp.array([3.0, -8.0, -12.0])
     print_msg("fixed effects ref: ", fixed_effects_ref)
 
     exit()
@@ -280,5 +278,9 @@ if __name__ == "__main__":
     #     "norm(theta - theta_ref): ",
     #     np.linalg.norm(results["theta"] - get_host(theta_ref)),
     # )
+
+    # x_ref_file = f"{BASE_DIR}/inputs_nv{nv}_ns{ns}_nt{nt}_nb{nb}/reference_outputs/x_ref_{n}_1.dat"
+    # x_ref = xp.loadtxt(x_ref_file)
+
     # print_msg("results['x'][-5:]: ", results["x"][-5:])
     # print_msg("norm(x - x_ref): ", np.linalg.norm(results["x"] - get_host(x_ref)))
