@@ -10,13 +10,13 @@ from pyinla.utils import print_msg, get_host
 from pyinla import xp
 
 path = os.path.dirname(__file__)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 if __name__ == "__main__":
-    base_dir = os.path.dirname(os.path.abspath(__file__))
 
     spatio_temporal_dict = {
         "type": "spatio_temporal",
-        "input_dir": f"{base_dir}/inputs_spatio_temporal",
+        "input_dir": f"{BASE_DIR}/inputs_spatio_temporal",
         "spatial_domain_dimension": 2,
         "r_s": 0,
         "r_t": 0,
@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
     regression_dict = {
         "type": "regression",
-        "input_dir": f"{base_dir}/inputs_regression",
+        "input_dir": f"{BASE_DIR}/inputs_regression",
         "n_fixed_effects": 8,
         "fixed_effects_prior_precision": 0.001,
     }
@@ -42,7 +42,7 @@ if __name__ == "__main__":
 
     likelihood_dict = {
         "type": "poisson",
-        "input_dir": f"{base_dir}",
+        "input_dir": f"{BASE_DIR}",
     }
     model = Model(
         submodels=[regression, spatio_temporal],
@@ -80,8 +80,8 @@ if __name__ == "__main__":
     )
 
     print_msg("\n--- Comparisons ---")
-    theta_ref = np.load(f"{base_dir}/reference_outputs/theta_ref.npy")
-    x_ref = np.load(f"{base_dir}/reference_outputs/x_ref.npy")
+    theta_ref = np.load(f"{BASE_DIR}/reference_outputs/theta_ref.npy")
+    x_ref = np.load(f"{BASE_DIR}/reference_outputs/x_ref.npy")
 
     # Compare hyperparameters
     print_msg(

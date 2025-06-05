@@ -8,13 +8,13 @@ from pyinla.utils import print_msg
 from pyinla import xp
 
 path = os.path.dirname(__file__)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 if __name__ == "__main__":
-    base_dir = os.path.dirname(os.path.abspath(__file__))
 
     regression_dict = {
         "type": "regression",
-        "input_dir": f"{base_dir}/inputs",
+        "input_dir": f"{BASE_DIR}/inputs",
         "n_fixed_effects": 6,
         "fixed_effects_prior_precision": 0.001,
     }
@@ -24,7 +24,7 @@ if __name__ == "__main__":
 
     likelihood_dict = {
         "type": "poisson",
-        "input_dir": f"{base_dir}",
+        "input_dir": f"{BASE_DIR}",
     }
     model = Model(
         submodels=[regression],
@@ -58,7 +58,7 @@ if __name__ == "__main__":
     )
 
     print_msg("\n--- Comparisons ---")
-    x_ref = xp.load(f"{base_dir}/reference_outputs/x_ref.npy")
+    x_ref = xp.load(f"{BASE_DIR}/reference_outputs/x_ref.npy")
 
     # Compare latent parameters
     print_msg(

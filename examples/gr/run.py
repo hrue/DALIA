@@ -10,13 +10,14 @@ from pyinla.submodels import RegressionSubModel
 from pyinla.utils import extract_diagonal, get_host, print_msg
 
 path = os.path.dirname(__file__)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 
 if __name__ == "__main__":
-    base_dir = os.path.dirname(os.path.abspath(__file__))
 
     regression_dict = {
         "type": "regression",
-        "input_dir": f"{base_dir}/inputs",
+        "input_dir": f"{BASE_DIR}/inputs",
         "n_fixed_effects": 6,
         "fixed_effects_prior_precision": 0.001,
     }
@@ -49,8 +50,8 @@ if __name__ == "__main__":
         config=pyinla_config.parse_config(pyinla_dict),
     )
 
-    theta_ref = xp.load(f"{base_dir}/reference_outputs/theta_ref.npy")
-    x_ref = xp.load(f"{base_dir}/reference_outputs/x_ref.npy")
+    theta_ref = xp.load(f"{BASE_DIR}/reference_outputs/theta_ref.npy")
+    x_ref = xp.load(f"{BASE_DIR}/reference_outputs/x_ref.npy")
 
     theta_ref = xp.array(theta_ref)
     x_ref = xp.array(x_ref)
