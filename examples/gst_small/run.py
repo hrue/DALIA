@@ -88,39 +88,6 @@ if __name__ == "__main__":
         config=pyinla_config.parse_config(pyinla_dict),
     )
 
-<<<<<<< HEAD
-    # print_msg("\n--- References ---")
-    theta_ref = xp.array(np.load(f"{BASE_DIR}/reference_outputs/theta_ref.npy"))
-    x_ref = xp.array(np.load(f"{BASE_DIR}/reference_outputs/x_ref.npy"))
-    
-    x_ref_2 = xp.array(np.loadtxt("/home/hpc/ihpc/ihpc060h/pyINLA/dev/sandbox_gaussian_spatioTemporal_verySmall/INLA_DIST_outputs/x_mean_INLA_DIST_466_1.dat"))
-    print("x_ref_2:", x_ref_2[:10])
-    print("x_ref[:10]:", x_ref[:10])
-    
-    x_ref_3 = xp.array(np.loadtxt("/home/hpc/ihpc/ihpc060h/b_INLA/src/mean_latent_parameters.txt"))
-    
-    print("difference in x_ref:", np.linalg.norm(x_ref - x_ref_2))
-    print("difference in x_ref_2:", np.linalg.norm(x_ref_2 - x_ref_3))
-
-    
-    model.theta = theta_ref
-    Qprior = model.construct_Q_prior()
-    Q_ref = model.construct_Q_conditional(eta = model.a @ model.x)
-    rhs_ref = model.construct_information_vector(eta=model.a @ model.x, x_i = model.x)
-    
-    pyinla.solver.cholesky(Q_ref, "bta")
-    x_ref_check = pyinla.solver.solve(rhs_ref, "bta")
-    # print last 6 values of x_ref
-    print_msg("x[-6:]:", x_ref[-6:])
-    print_msg("x_check[-6:]:", x_ref_check[-6:])
-    
-    print("x[:10] - x_check[:10]:", x_ref[:10] - x_ref_check[:10])
-    
-    print("difference in x_ref:", np.linalg.norm(x_ref[:460] - x_ref_check[:460]))
-    exit()
-
-=======
->>>>>>> a4e3b95216fb0d343471502ad00844fbef1521c4
     results = pyinla.run()
 
     print_msg("\n--- Results ---")

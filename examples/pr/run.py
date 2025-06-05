@@ -12,17 +12,10 @@ from pyinla.utils import print_msg
 from pyinla import xp
 from examples_utils.parser_utils import parse_args
 
-<<<<<<< HEAD
-path = os.path.dirname(__file__)
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-if __name__ == "__main__":
-=======
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 if __name__ == "__main__":
     print_msg("--- Example: Poisson Regression ---")
->>>>>>> a4e3b95216fb0d343471502ad00844fbef1521c4
 
     # Check for parsed parameters
     args = parse_args()
