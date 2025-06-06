@@ -6,44 +6,57 @@ sys.path.append(parent_dir)
 
 import numpy as np
 
-from pyinla import xp
+from pyinla import xp, backend_flags
 from pyinla.configs import likelihood_config, pyinla_config, submodels_config
 from pyinla.core.model import Model
 from pyinla.core.pyinla import PyINLA
-from pyinla.submodels import RegressionSubModel
-from pyinla.utils import extract_diagonal, get_host, print_msg
+from pyinla.submodels import RegressionSubModel, SpatialSubModel
+from pyinla.utils import get_host, print_msg  # , extract_diagonal
 from examples_utils.parser_utils import parse_args
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-if __name__ == "__main__":
-    print_msg("--- Example: Gaussian Regression ---")
 
-    # Check for parsed parameters
+if __name__ == "__main__":
+    print_msg("--- Example: Gaussian spatial model with regression ---")
     args = parse_args()
 
-    # Configurations of the regression submodel
+    spatial_dict = {
+        "type": "spatial",
+        "input_dir": f"{BASE_DIR}/inputs_spatial",
+        "spatial_domain_dimension": 2,
+        "r_s": 0,  #
+        "sigma_e": 0,
+        "ph_s": {"type": "penalized_complexity", "alpha": 0.01, "u": 0.6},
+        "ph_e": {"type": "penalized_complexity", "alpha": 0.01, "u": 5},
+    }
+    spatial = SpatialSubModel(
+        config=submodels_config.parse_config(spatial_dict),
+    )
+
     regression_dict = {
         "type": "regression",
-        "input_dir": f"{BASE_DIR}/inputs",
-        "n_fixed_effects": 6,
+        "input_dir": f"{BASE_DIR}/inputs_regression",
+        "n_fixed_effects": 5,
         "fixed_effects_prior_precision": 0.001,
     }
     regression = RegressionSubModel(
         config=submodels_config.parse_config(regression_dict),
     )
-    # Likelihood
+
     likelihood_dict = {
         "type": "gaussian",
-        "prec_o": 1.5,
-        "prior_hyperparameters": {"type": "gaussian", "mean": 3.5, "precision": 0.5},
+        "prec_o": 4,
+        "prior_hyperparameters": {
+            "type": "penalized_complexity",
+            "alpha": 0.01,
+            "u": 5,
+        },
     }
-    # Creation of the first model by combining the Regression submodel and the likelihood
     model = Model(
-        submodels=[regression],
+        submodels=[spatial, regression],
         likelihood_config=likelihood_config.parse_config(likelihood_dict),
     )
-    print_msg(model)
 
     # Configurations of PyINLA
     pyinla_dict = {
@@ -52,19 +65,26 @@ if __name__ == "__main__":
             "max_iter": args.max_iter,
             "gtol": 1e-3,
             "disp": True,
+            "maxcor": len(model.theta),
         },
+        "f_reduction_tol": 1e-3,
+        "theta_reduction_tol": 1e-4,
         "inner_iteration_max_iter": 50,
         "eps_inner_iteration": 1e-3,
         "eps_gradient_f": 1e-3,
         "simulation_dir": ".",
     }
+
     pyinla = PyINLA(
         model=model,
         config=pyinla_config.parse_config(pyinla_dict),
     )
 
-    theta_ref = xp.load(f"{BASE_DIR}/reference_outputs/theta_ref.npy")
-    x_ref = xp.load(f"{BASE_DIR}/reference_outputs/x_ref.npy")
+    theta_ref = np.loadtxt(f"{BASE_DIR}/reference_outputs/theta_ref.dat")
+    np.save(f"{BASE_DIR}/reference_outputs/theta_ref.npy", theta_ref)
+
+    x_ref = np.loadtxt(f"{BASE_DIR}/reference_outputs/x_ref.dat")
+    np.save(f"{BASE_DIR}/reference_outputs/x_ref.npy", x_ref)
 
     results = pyinla.run()
 
@@ -78,14 +98,17 @@ if __name__ == "__main__":
 
     print_msg("\n--- Comparisons ---")
     # Compare hyperparameters
-    theta_ref = xp.load(f"{BASE_DIR}/reference_outputs/theta_ref.npy")
+    theta_ref = np.load(f"{BASE_DIR}/reference_outputs/theta_ref.npy")
     print_msg(
         "Norm (theta - theta_ref):        ",
         f"{np.linalg.norm(results['theta'] - get_host(theta_ref)):.4e}",
     )
 
+    x_ref = np.loadtxt(f"{BASE_DIR}/reference_outputs/mean_latent_parameters_444.txt")
+    np.save(f"{BASE_DIR}/reference_outputs/x_ref.npy", x_ref)
+
     # Compare latent parameters
-    x_ref = xp.load(f"{BASE_DIR}/reference_outputs/x_ref.npy")
+    # x_ref = np.load(f"{BASE_DIR}/reference_outputs/x_ref.npy")
     print_msg(
         "Norm (x - x_ref):                ",
         f"{np.linalg.norm(results['x'] - get_host(x_ref)):.4e}",
@@ -101,11 +124,11 @@ if __name__ == "__main__":
     )
 
     # Compare marginal variances of observations
-    var_obs = pyinla.get_marginal_variances_observations(theta=theta_ref, x_star=x_ref)
-    var_obs_ref = extract_diagonal(model.a @ Qinv_ref @ model.a.T)
-    print_msg(
-        "Norm (var_obs - var_obs_ref):    ",
-        f"{xp.linalg.norm(var_obs - var_obs_ref):.4e}",
-    )
+    # var_obs = pyinla.get_marginal_variances_observations(theta=theta_ref, x_star=x_ref)
+    # var_obs_ref = extract_diagonal(model.a @ Qinv_ref @ model.a.T)
+    # print_msg(
+    #     "Norm (var_obs - var_obs_ref):    ",
+    #     f"{xp.linalg.norm(var_obs - var_obs_ref):.4e}",
+    # )
 
     print_msg("\n--- Finished ---")
