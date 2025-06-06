@@ -344,7 +344,7 @@ class PyINLA:
         if len(self.model.theta) == 0:
             # Only run the inner iteration
             print_msg("No hyperparameters, just running inner iteration.")
-            self.f_value = self._evaluate_f(self.model.theta, comm=self.comm_feval)
+            self.f_value = self._evaluate_f(self.model.theta)
 
             self.minimization_result: dict = {
                 "theta": self.model.theta,
@@ -560,7 +560,7 @@ class PyINLA:
             # self.x value matches the "bare" hyperparameters evaluation
             if self.color_feval == task_mapping[feval_i]:
                 self.f_values_i[feval_i] = self._evaluate_f(
-                    theta_i=self.theta_mat[:, feval_i], comm=self.comm_feval
+                    theta_i=self.theta_mat[:, feval_i]
                 )
 
         # Here carefull on the reduction as it's gonna add the values from all ranks and not only the root of the groups - TODO
@@ -603,7 +603,6 @@ class PyINLA:
     def _evaluate_f(
         self,
         theta_i: NDArray,
-        comm,
     ) -> float:
         """Evaluate the objective function f(theta) = log(p(theta|y)).
 
@@ -817,7 +816,7 @@ class PyINLA:
         counter = 0
         # compute f(theta)
         if self.color_feval == task_mapping[0]:
-            f_theta = self._evaluate_f(theta_i, comm=self.comm_feval)
+            f_theta = self._evaluate_f(theta_i)
             f_ii_loc[1, :] = f_theta
         counter += 1
 
@@ -830,14 +829,14 @@ class PyINLA:
                 if self.color_feval == task_mapping[counter]:
                     # theta+eps_i
                     f_ii_loc[0, i] = self._evaluate_f(
-                        theta_i + eps_mat[i, :], comm=self.comm_feval
+                        theta_i + eps_mat[i, :]
                     )
                 counter += 1
 
                 if self.color_feval == task_mapping[counter]:
                     # theta-eps_i
                     f_ii_loc[2, i] = self._evaluate_f(
-                        theta_i - eps_mat[i, :], comm=self.comm_feval
+                        theta_i - eps_mat[i, :]
                     )
                 counter += 1
 
@@ -846,28 +845,28 @@ class PyINLA:
                 # theta+eps_i+eps_j
                 if self.color_feval == task_mapping[counter]:
                     f_ij_loc[0, k] = self._evaluate_f(
-                        theta_i + eps_mat[i, :] + eps_mat[j, :], comm=self.comm_feval
+                        theta_i + eps_mat[i, :] + eps_mat[j, :]
                     )
                 counter += 1
 
                 # theta+eps_i-eps_j
                 if self.color_feval == task_mapping[counter]:
                     f_ij_loc[1, k] = self._evaluate_f(
-                        theta_i + eps_mat[i, :] - eps_mat[j, :], comm=self.comm_feval
+                        theta_i + eps_mat[i, :] - eps_mat[j, :]
                     )
                 counter += 1
 
                 # theta-eps_i+eps_j
                 if self.color_feval == task_mapping[counter]:
                     f_ij_loc[2, k] = self._evaluate_f(
-                        theta_i - eps_mat[i, :] + eps_mat[j, :], comm=self.comm_feval
+                        theta_i - eps_mat[i, :] + eps_mat[j, :]
                     )
                 counter += 1
 
                 # theta-eps_i-eps_j
                 if self.color_feval == task_mapping[counter]:
                     f_ij_loc[3, k] = self._evaluate_f(
-                        theta_i - eps_mat[i, :] - eps_mat[j, :], comm=self.comm_feval
+                        theta_i - eps_mat[i, :] - eps_mat[j, :]
                     )
                 counter += 1
 
