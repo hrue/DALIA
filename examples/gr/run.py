@@ -14,18 +14,10 @@ from pyinla.submodels import RegressionSubModel
 from pyinla.utils import extract_diagonal, get_host, print_msg
 from examples_utils.parser_utils import parse_args
 
-<<<<<<< HEAD
-path = os.path.dirname(__file__)
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-
-if __name__ == "__main__":
-=======
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 if __name__ == "__main__":
     print_msg("--- Example: Gaussian Regression ---")
->>>>>>> a4e3b95216fb0d343471502ad00844fbef1521c4
 
     # Check for parsed parameters
     args = parse_args()
@@ -71,15 +63,9 @@ if __name__ == "__main__":
         config=pyinla_config.parse_config(pyinla_dict),
     )
 
-<<<<<<< HEAD
     theta_ref = xp.load(f"{BASE_DIR}/reference_outputs/theta_ref.npy")
     x_ref = xp.load(f"{BASE_DIR}/reference_outputs/x_ref.npy")
 
-    theta_ref = xp.array(theta_ref)
-    x_ref = xp.array(x_ref)
-
-=======
->>>>>>> a4e3b95216fb0d343471502ad00844fbef1521c4
     results = pyinla.run()
 
     print_msg("\n--- Results ---")

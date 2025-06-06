@@ -91,12 +91,9 @@ if __name__ == "__main__":
     )
 
     print_msg("\n--- Comparisons ---")
-<<<<<<< HEAD
     theta_ref = np.load(f"{BASE_DIR}/reference_outputs/theta_ref.npy")
     x_ref = np.load(f"{BASE_DIR}/reference_outputs/x_ref.npy")
 
-=======
->>>>>>> a4e3b95216fb0d343471502ad00844fbef1521c4
     # Compare hyperparameters
     theta_ref = np.load(f"{BASE_DIR}/reference_outputs/theta_ref.npy")
     print_msg(
@@ -105,7 +102,6 @@ if __name__ == "__main__":
     )
 
     # Compare latent parameters
-    x_ref = np.load(f"{BASE_DIR}/reference_outputs/x_ref.npy")
     print_msg(
         "Norm (x - x_ref):                ",
         f"{np.linalg.norm(minimization_result['x'] - x_ref):.4e}",

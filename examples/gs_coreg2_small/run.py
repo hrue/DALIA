@@ -16,7 +16,7 @@ from pyinla.configs import (
 from pyinla.core.model import Model
 from pyinla.core.pyinla import PyINLA
 from pyinla.models import CoregionalModel
-from pyinla.utils import print_msg
+from pyinla.utils import print_msg, get_host
 from pyinla.submodels import RegressionSubModel, SpatialSubModel
 from examples_utils.parser_utils import parse_args
 
@@ -41,8 +41,8 @@ if __name__ == "__main__":
 
     n = nv * (ns * nt) + nb
 
-    theta_ref_file = f"{BASE_DIR}/inputs_nv{nv}_ns{ns}_nt{nt}_nb{nb}/reference_outputs/theta_interpretS_original_pyINLA_perm_{dim_theta}_1.dat"
-    theta_ref = np.loadtxt(theta_ref_file)
+    theta_ref_file = f"{BASE_DIR}/inputs_nv{nv}_ns{ns}_nt{nt}_nb{nb}/reference_outputs/theta_ref.npy"
+    theta_ref = np.load(theta_ref_file)
     theta_initial = theta_ref + 0.3 * np.random.randn(dim_theta)
 
     # Configurations of the submodels for the first model
@@ -164,75 +164,49 @@ if __name__ == "__main__":
         config=pyinla_config.parse_config(pyinla_dict),
     )
 
-    # Run the optimization
-    minimization_result = pyinla.minimize()
+    results = pyinla.run()
 
-    exit()
-    # TODO: From here, to be curated
+    print_msg("results['theta']: ", results["theta"])
 
-    pyinla.model.theta = xp.array(theta_ref)
-    x = xp.zeros_like(pyinla.model.x)
-    Qprior = pyinla.model.construct_Q_prior()
-    Qcond = pyinla.model.construct_Q_conditional(eta=pyinla.model.a @ x)
-    rhs = pyinla.model.construct_information_vector(eta=pyinla.model.a @ x, x_i=x)
+    print_msg("cov_theta: \n", results["cov_theta"])
+    print_msg("mean of the fixed effects: ", results["x"][-nb:])
+    print_msg(
+        "marginal variances of the fixed effects: ",
+        results["marginal_variances_latent"][-nb:],
+    )
 
-    rhs_copy = rhs.copy()
-    pyinla.solver.cholesky(Qcond)
-    x_est = pyinla.solver.solve(rhs_copy)
-    print_msg("x_est: ", x_est[-nb:])
+    print_msg("\n--- Comparisons ---")
+    # Compare hyperparameters
+    theta_ref = np.load(f"{BASE_DIR}/inputs_nv{nv}_ns{ns}_nt{nt}_nb{nb}/reference_outputs/theta_ref.npy")
+    print_msg(
+        "Norm (theta - theta_ref):        ",
+        f"{np.linalg.norm(results['theta'] - get_host(theta_ref)):.4e}",
+    )
 
-    fixed_effects_ref = xp.array([-3.0, 8.0])
-    print_msg("fixed effects ref: ", fixed_effects_ref)
+    x_ref = np.load(f"{BASE_DIR}/inputs_nv{nv}_ns{ns}_nt{nt}_nb{nb}/reference_outputs/x_ref.npy")
+    # Compare latent parameters
+    print_msg(
+        "Norm (x - x_ref):                ",
+        f"{np.linalg.norm(results['x'] - get_host(x_ref)):.4e}",
+    )
 
-    exit()
-    minimization_result = pyinla.minimize()
+    # Compare marginal variances of latent parameters
+    var_latent_params = results["marginal_variances_latent"]
+    Qconditional = pyinla.model.construct_Q_conditional(
+        eta=coreg_model.a @ coreg_model.x
+    )
+    Qinv_ref = xp.linalg.inv(Qconditional.toarray())
+    print_msg(
+        "Norm (marg var latent - ref):    ",
+        f"{np.linalg.norm(var_latent_params - xp.diag(Qinv_ref)):.4e}",
+    )
 
-    print_msg("\n--- PyINLA results ---")
-
-    # print_msg("theta keys: ", coreg_model.theta_keys)
-    print_msg("theta ref: ", theta_ref)
-    print_msg("minimization_result: ", minimization_result["theta"])
-
-    print_msg("x[-nb:]: ", pyinla.model.x[-nb:])
-    print_msg("fixed effects ref: ", fixed_effects_ref)
-
-    x_ref_file = f"{BASE_DIR}/inputs_nv{nv}_ns{ns}_nt{nt}_nb{nb}/reference_outputs/x_ref_{n}_1.dat"
-    x_ref = xp.loadtxt(x_ref_file)
-
-    # cov_theta = pyinla.compute_covariance_hp(coreg_model.theta)
-    # print_msg("covariance hyperparameters(coreg_model.theta): \n", cov_theta)
-
-    # # compute marginals latent parameters
-    # theta_ref = xp.array(theta_ref)
-    # print_msg("mean latent parameters[-5:]: ", pyinla.model.x[-5:])
-    # marginals = pyinla.get_marginal_variances_latent_parameters(
-    #     theta=theta_ref, x_star=pyinla.model.x
-    # )
-    # print_msg("sd latent[-5:]: ", xp.sqrt(marginals[-5:]))
-
-    # marginals_obs = pyinla.get_marginal_variances_observations(
-    #     theta=coreg_model.theta, x_star=pyinla.model.x
-    # )
-    # print_msg("sd obs[:5]: ", xp.sqrt(marginals_obs[:5]))
-    # print_msg("mean obs[:5]: ", (coreg_model.a @ pyinla.model.x)[:5])
-    # print_msg("y[:5]: ", pyinla.model.y[:5])
-
-    # # call everything
-    # results = pyinla.run()
-
-    # print_msg("results['theta']: ", results["theta"])
-    # # print_msg("results['f']: ", results["f"])
-    # # print_msg("results['grad_f']: ", results["grad_f"])
-    # print_msg("cov_theta: \n", results["cov_theta"])
-    # print_msg("mean of the fixed effects: ", results["x"][-nb:])
+    # Compare marginal variances of observations
+    # var_obs = pyinla.get_marginal_variances_observations(theta=theta_ref, x_star=x_ref)
+    # var_obs_ref = extract_diagonal(model.a @ Qinv_ref @ model.a.T)
     # print_msg(
-    #     "marginal variances of the fixed effects: ",
-    #     results["marginal_variances_latent"][-nb:],
+    #     "Norm (var_obs - var_obs_ref):    ",
+    #     f"{xp.linalg.norm(var_obs - var_obs_ref):.4e}",
     # )
 
-    # print_msg(
-    #     "norm(theta - theta_ref): ",
-    #     np.linalg.norm(results["theta"] - get_host(theta_ref)),
-    # )
-    # print_msg("results['x'][-5:]: ", results["x"][-5:])
-    # print_msg("norm(x - x_ref): ", np.linalg.norm(results["x"] - get_host(x_ref)))
+    print_msg("\n--- Finished ---")

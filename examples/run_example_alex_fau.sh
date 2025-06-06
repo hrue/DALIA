@@ -1,36 +1,28 @@
-#!/bin/bash -l
-#SBATCH --job-name="examples"
-#SBATCH --output=%x.%j.out
-#SBATCH --error=%x.%j.err
-#SBATCH --account=sm96
-#SBATCH --time=00:05:00
+#!/bin/bash
+
+#SBATCH --job-name=dalia
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=64
-#SBATCH --gpus-per-task=1
-####SBATCH --partition=normal
-#SBATCH --partition=debug
-#SBATCH --constraint=gpu
-#SBATCH --hint=nomultithread
-#SBATCH --uenv=prgenv-gnu/24.11:v1
-#SBATCH --view=modules
+#SBATCH --time=01:00:00
+#SBATCH --gres=gpu:a100:2
+#SBATCH --partition=a100
+#SBATCH --constraint=a100_80
+# ##SBATCH --qos=a100multi
+# ##SBATCH --exclusive
+#SBATCH --error=%x.err          #The .error file name
+#SBATCH --output=%x.out         #The .output file name
 
-set -e -u
+num_ranks=2
 
-export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
-export MPICH_GPU_SUPPORT_ENABLED=1
+backend=cupy
+export ARRAY_MODULE=${backend}
 
-export NCCL_NET='AWS Libfabric'
-export CUDA_VISIBLE_DEVICES=$SLURM_LOCALID
-
-source ~/load_modules.sh
-conda activate allin
-
-export ARRAY_MODULE=cupy
 export MPI_CUDA_AWARE=0
+export USE_NCCL=0
+
+TIMESTAMP=$(date +"%H-%M-%S")
 
 # --- How to Run ---
-# This run script is designed to run on the Daint supercomputer at CSCS.
+# This run script is designed to run on Alex at NHR@FAU
 # It uses SLURM for job scheduling and assumes that the user has a working 
 # installation of pyINLA and its dependencies. By default, PyINLA will exploit  
 # job parallelism at the parallel function evaluation level.
