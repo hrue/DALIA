@@ -306,7 +306,7 @@ class PyINLA:
         )
 
         # compute marginal variances of the observations
-        # TODO: only run by default when dense multiplcation issue is fixed
+        # TODO: only run by default when dense multiplcation issue is fixed, see issue #78
         # marginal_variances_observations = self.get_marginal_variances_observations(
         #     theta_star, x_star
         # )
