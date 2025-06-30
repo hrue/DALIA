@@ -34,21 +34,30 @@ export MPI_CUDA_AWARE=0
 # It uses SLURM for job scheduling and assumes that the user has a working 
 # installation of pyINLA and its dependencies. By default, PyINLA will exploit  
 # job parallelism at the parallel function evaluation level.
+
 # --- Parameters ---
 # `--solver_min_p` : The minimum number of Processes(/GPUs) to use for the structured 
 #                    solver. The default is 1. The maximum number of processes is
 # `--max_iter` : The maximum number of iterations of the minimization.
 
+base_dir=~
+
+# --- Run Regression Example ---
+#srun python ${base_dir}/pyINLA/examples/regression/run.py --max_iter 100
+
+# --- Run Spatial Examples ---
+# srun python ${base_dir}/pyINLA/examples/gs_small/run.py --max_iter 100
+
 # --- Run Spatio-temporal Examples ---
-# srun python /users/vmaillou/repositories/pyINLA/examples/gst_small/run.py --solver_min_p 1
-srun python /users/vmaillou/repositories/pyINLA/examples/gst_medium/run.py --solver_min_p 1 --max_iter 1
-# srun python /users/vmaillou/repositories/pyINLA/examples/gst_large/run.py --solver_min_p 1
+# srun python ${base_dir}/pyINLA/examples/gst_small/run.py --solver_min_p 1 --max_iter 100
+# srun python ${base_dir}/pyINLA/examples/gst_medium/run.py --solver_min_p 1 --max_iter 100
+# srun python ${base_dir}/pyINLA/examples/gst_large/run.py --solver_min_p 1 --max_iter 100
 
 # --- Run Coregional (Spatial) Examples ---
-# srun python /users/vmaillou/repositories/pyINLA/examples/gs_coreg2_small/run.py
-# srun python /users/vmaillou/repositories/pyINLA/examples/gs_coreg3_small/run.py
+srun python ${base_dir}/pyINLA/examples/gs_coreg2_small/run.py --max_iter 100
+# srun python ${base_dir}/pyINLA/examples/gs_coreg3_small/run.py --max_iter 100
 
 # --- Run Coregional (Spatio-temporal) Examples ---
-# srun python /users/vmaillou/repositories/pyINLA/examples/gst_coreg2_small/run.py --solver_min_p 1
-# srun python /users/vmaillou/repositories/pyINLA/examples/gst_coreg3_small/run.py --solver_min_p 1 --max_iter 1
+# srun python ${base_dir}/pyINLA/examples/gst_coreg2_small/run.py --solver_min_p 1 --max_iter 100
+# srun python ${base_dir}/pyINLA/examples/gst_coreg3_small/run.py --solver_min_p 1 --max_iter 100
 

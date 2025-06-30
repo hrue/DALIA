@@ -306,9 +306,10 @@ class PyINLA:
         )
 
         # compute marginal variances of the observations
-        marginal_variances_observations = self.get_marginal_variances_observations(
-            theta_star, x_star
-        )
+        # TODO: only run by default when dense multiplcation issue is fixed, see issue #78
+        # marginal_variances_observations = self.get_marginal_variances_observations(
+        #     theta_star, x_star
+        # )
 
         # construct new dictionary with the results
         results = {
@@ -318,11 +319,11 @@ class PyINLA:
             "grad_f": minimization_result["grad_f"],
             "f_values": minimization_result["f_values"],
             "theta_values": minimization_result["theta_values"],
-            "cov_theta": get_host(cov_theta),
-            "marginal_variances_latent": get_host(marginal_variances_latent),
-            "marginal_variances_observations": get_host(
-                marginal_variances_observations
-            ),
+            "cov_theta": cov_theta,
+            "marginal_variances_latent": marginal_variances_latent,
+            # "marginal_variances_observations": get_host(
+            #     marginal_variances_observations
+            # ),
         }
 
         return results
@@ -559,7 +560,7 @@ class PyINLA:
             # self.x value matches the "bare" hyperparameters evaluation
             if self.color_feval == task_mapping[feval_i]:
                 self.f_values_i[feval_i] = self._evaluate_f(
-                    theta_i=self.theta_mat[:, feval_i], comm=self.comm_feval
+                    theta_i=self.theta_mat[:, feval_i]
                 )
 
         # Here carefull on the reduction as it's gonna add the values from all ranks and not only the root of the groups - TODO
@@ -602,7 +603,6 @@ class PyINLA:
     def _evaluate_f(
         self,
         theta_i: NDArray,
-        comm,
     ) -> float:
         """Evaluate the objective function f(theta) = log(p(theta|y)).
 
@@ -816,7 +816,7 @@ class PyINLA:
         counter = 0
         # compute f(theta)
         if self.color_feval == task_mapping[0]:
-            f_theta = self._evaluate_f(theta_i, comm=self.comm_feval)
+            f_theta = self._evaluate_f(theta_i)
             f_ii_loc[1, :] = f_theta
         counter += 1
 
@@ -829,14 +829,14 @@ class PyINLA:
                 if self.color_feval == task_mapping[counter]:
                     # theta+eps_i
                     f_ii_loc[0, i] = self._evaluate_f(
-                        theta_i + eps_mat[i, :], comm=self.comm_feval
+                        theta_i + eps_mat[i, :]
                     )
                 counter += 1
 
                 if self.color_feval == task_mapping[counter]:
                     # theta-eps_i
                     f_ii_loc[2, i] = self._evaluate_f(
-                        theta_i - eps_mat[i, :], comm=self.comm_feval
+                        theta_i - eps_mat[i, :]
                     )
                 counter += 1
 
@@ -845,28 +845,28 @@ class PyINLA:
                 # theta+eps_i+eps_j
                 if self.color_feval == task_mapping[counter]:
                     f_ij_loc[0, k] = self._evaluate_f(
-                        theta_i + eps_mat[i, :] + eps_mat[j, :], comm=self.comm_feval
+                        theta_i + eps_mat[i, :] + eps_mat[j, :]
                     )
                 counter += 1
 
                 # theta+eps_i-eps_j
                 if self.color_feval == task_mapping[counter]:
                     f_ij_loc[1, k] = self._evaluate_f(
-                        theta_i + eps_mat[i, :] - eps_mat[j, :], comm=self.comm_feval
+                        theta_i + eps_mat[i, :] - eps_mat[j, :]
                     )
                 counter += 1
 
                 # theta-eps_i+eps_j
                 if self.color_feval == task_mapping[counter]:
                     f_ij_loc[2, k] = self._evaluate_f(
-                        theta_i - eps_mat[i, :] + eps_mat[j, :], comm=self.comm_feval
+                        theta_i - eps_mat[i, :] + eps_mat[j, :]
                     )
                 counter += 1
 
                 # theta-eps_i-eps_j
                 if self.color_feval == task_mapping[counter]:
                     f_ij_loc[3, k] = self._evaluate_f(
-                        theta_i - eps_mat[i, :] - eps_mat[j, :], comm=self.comm_feval
+                        theta_i - eps_mat[i, :] - eps_mat[j, :]
                     )
                 counter += 1
 
@@ -905,7 +905,7 @@ class PyINLA:
         eigvals = xp.linalg.eigvalsh(hess)
 
         if xp.any(eigvals < 0):
-            print(f"Negative eigenvalues detected: {eigvals}")
+            print_msg(f"Negative eigenvalues detected: {eigvals}")
 
         return hess
 
@@ -931,8 +931,6 @@ class PyINLA:
 
         eta = self.model.a @ self.model.x
         
-        print("in compute marginal variances latent parameters. theta:  ", theta)
-
         self.model.construct_Q_conditional(eta)
         self.solver.cholesky(self.model.Q_conditional, sparsity="bta")
         self.solver.selected_inversion(sparsity="bta")
@@ -1142,24 +1140,27 @@ class PyINLA:
         # Compute the log determinant of Q_conditional
         logdet_Q_conditional = self.solver.logdet(sparsity="bta")
 
-        # Symmetrizing (averaging the tip of the arrow to tame down numerical innaccuracies)
-        tip_accu = x_mean[-self.model.total_number_fixed_effects():].copy()
-        synchronize(comm=self.comm_qeval)
-        allreduce(
-            tip_accu,
-            op="sum",
-            factor=1 / self.comm_qeval.size,
-            comm=self.comm_qeval,
-        )
-        synchronize(comm=self.comm_qeval)
-        x_mean[-self.model.total_number_fixed_effects():] = tip_accu
-
-        if x is None and x_mean is not None:
-            quadratic_form = x_mean.T @ Q_conditional @ x_mean
-        elif x is None and x_mean is None:
+        if x is None and x_mean is None:
             quadratic_form = 0.0
+        # TODO: there is probably a cleaner way to formulate these statements ...
+        # the else fails if x_mean is None
         else:
-            quadratic_form = (x - x_mean).T @ Q_conditional @ (x - x_mean)
+            # Symmetrizing (averaging the tip of the arrow to tame down numerical innaccuracies)
+            tip_accu = x_mean[-self.model.total_number_fixed_effects():].copy()
+            synchronize(comm=self.comm_qeval)
+            allreduce(
+                tip_accu,
+                op="sum",
+                factor=1 / self.comm_qeval.size,
+                comm=self.comm_qeval,
+            )
+            synchronize(comm=self.comm_qeval)
+            x_mean[-self.model.total_number_fixed_effects():] = tip_accu
+
+            if x is None and x_mean is not None:
+                quadratic_form = x_mean.T @ Q_conditional @ x_mean
+            else:
+                quadratic_form = (x - x_mean).T @ Q_conditional @ (x - x_mean)
 
         # Compute the log conditional
         log_conditional = 0.5 * logdet_Q_conditional - 0.5 * quadratic_form

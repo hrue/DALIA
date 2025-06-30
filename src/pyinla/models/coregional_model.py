@@ -233,6 +233,11 @@ class CoregionalModel(Model):
             self.x = self.x[self.permutation_latent_variables]
 
         elif self.coregionalization_type == "spatial":
+            n_re = self.n_spatial_nodes * self.n_temporal_nodes
+
+            # don't permute when nt is 1
+            self.permutation_Qst = xp.arange(0, self.n_models * n_re, 1)
+            
             # permute fixed effects to the end
             self.permutation_latent_variables = (
                 self._generate_permutation_indices_spatial(
@@ -491,43 +496,34 @@ class CoregionalModel(Model):
             
             #Qprior_re = sp.sparse.coo_matrix((self.data_Qprior_re, (self.rows_Qprior_re, self.columns_Qprior_re)), shape=( self.n_models * n_re,  self.n_models * n_re))
 
-        # Apply the permutation to the Qprior_st
-        if self.coregionalization_type == "spatio_temporal":
-            # Permute matrix
-            # Qprior_st_perm = Qprior_st[self.permutation_Qst, :][:, self.permutation_Qst]
+        # Permute matrix
+        # Qprior_st_perm = Qprior_st[self.permutation_Qst, :][:, self.permutation_Qst]
 
-            if self.permutation_vector_Q_prior is None:
-                self.Qprior_re_perm = sp.sparse.csc_matrix(
-                    (self.n_models * n_re, self.n_models * n_re),
-                    dtype=self.data_Qprior_re.dtype,
-                )
-                #perm = np.arange(Qprior_st.shape[0])
-                self.set_data_array_permutation_indices(
-                    self.permutation_Qst,
-                    self.rows_Qprior_re,
-                    self.columns_Qprior_re,
-                    self.n_models * n_re,
-                )
-                
-                # we only need to set these once
-                self.Qprior_re_perm.indices = self.permutation_indices_Q_prior
-                self.Qprior_re_perm.indptr = self.permutation_indptr_Q_prior
-                
-                # dont need these anymore
-                self.rows_Qprior_re = None
-                self.columns_Qprior_re = None
-                
-            free_unused_gpu_memory() 
-      
-            self.data_Qprior_re = self.data_Qprior_re[self.permutation_vector_Q_prior]
-        else:
-            # Qprior_st_perm = Qprior_st
-            self.Qprior_re_perm = sp.sparse.coo_matrix(
-                (self.data_Qprior_re, (self.rows_Qprior_re, self.columns_Qprior_re)),
-                shape=(self.n_models * n_re, self.n_models * n_re),
-            ).tocsc()
+        if self.permutation_vector_Q_prior is None:
+            self.Qprior_re_perm = sp.sparse.csc_matrix(
+                (self.n_models * n_re, self.n_models * n_re),
+                dtype=self.data_Qprior_re.dtype,
+            )
             
-            self.Qprior_re_perm.sort_indices()
+            # self.permutation_Qst is the identity for spatial models
+            self.set_data_array_permutation_indices(
+                self.permutation_Qst,
+                self.rows_Qprior_re,
+                self.columns_Qprior_re,
+                self.n_models * n_re,
+            )
+            
+            # we only need to set these once
+            self.Qprior_re_perm.indices = self.permutation_indices_Q_prior
+            self.Qprior_re_perm.indptr = self.permutation_indptr_Q_prior
+            
+            # dont need these anymore
+            self.rows_Qprior_re = None
+            self.columns_Qprior_re = None
+            
+        free_unused_gpu_memory() 
+    
+        self.data_Qprior_re = self.data_Qprior_re[self.permutation_vector_Q_prior]
 
         if Q_r != []:
             if self.Q_prior is None:

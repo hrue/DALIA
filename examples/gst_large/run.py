@@ -1,15 +1,18 @@
 import sys
 import os
+import numpy as np
 
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(parent_dir)
+
+from pyinla import xp
 
 from pyinla.configs import likelihood_config, pyinla_config, submodels_config
 from pyinla.core.model import Model
 from pyinla.core.pyinla import PyINLA
 from pyinla.submodels import RegressionSubModel, SpatioTemporalSubModel
 from examples_utils.parser_utils import parse_args
-from pyinla.utils import print_msg
+from pyinla.utils import print_msg, get_host
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -27,9 +30,9 @@ if __name__ == "__main__":
         "r_t": -0.3068528194400548,
         "sigma_st": -2.112085713764618,
         "manifold": "sphere",
-        "ph_s": {"type": "gaussian", "mean": 0.03972077083991806, "precision": 0.5},
-        "ph_t": {"type": "gaussian", "mean": 2.3931471805599456, "precision": 0.5},
-        "ph_st": {"type": "gaussian", "mean": 1.4379142862353824, "precision": 0.5},
+        "ph_s": {"type": "penalized_complexity", "alpha": 0.01, "u": 0.5},
+        "ph_t": {"type": "penalized_complexity", "alpha": 0.01, "u": 5},
+        "ph_st": {"type": "penalized_complexity", "alpha": 0.01, "u": 3},
     }
     spatio_temporal = SpatioTemporalSubModel(
         config=submodels_config.parse_config(spatio_temporal_dict),
@@ -48,9 +51,12 @@ if __name__ == "__main__":
     # Configurations of the likelihood
     likelihood_dict = {
         "type": "gaussian",
-        "prec_o": 0.5,
-        "prior_hyperparameters": {"type": "gaussian", "mean": 1.4, "precision": 0.5},
-    }
+        "prec_o": 4,
+        "prior_hyperparameters": {
+            "type": "penalized_complexity",
+            "alpha": 0.01,
+            "u": 5,
+        },    }
 
     # Creation of the model by combining the submodels and the likelihood
     model = Model(
@@ -72,13 +78,33 @@ if __name__ == "__main__":
         model=model,
         config=pyinla_config.parse_config(pyinla_dict),
     )
+    
+    # print_msg("\n--- References ---")
+    theta_ref = xp.array(np.load(f"{BASE_DIR}/reference_outputs/theta_ref.npy"))
+    x_ref = xp.array(np.load(f"{BASE_DIR}/reference_outputs/x_ref.npy"))
 
-    # Run the optimization
-    minimization_result = pyinla.minimize()
+    results = pyinla.run()
+    
+    print_msg("\n--- Results ---")
+    print_msg("Theta values:\n", results["theta"])
+    print_msg("Covariance of theta:\n", results["cov_theta"])
+    print_msg(
+        "Mean of the fixed effects:\n",
+        results["x"][-model.submodels[-1].n_fixed_effects:],
+    )
 
+    print_msg("\n--- Comparisons ---")
 
+    # Compare hyperparameters
+    print_msg(
+        "Norm (theta - theta_ref):        ",
+        f"{np.linalg.norm(results['theta'] - get_host(theta_ref)):.4e}",
+    )
+    
+    # Compare latent parameters
+    print_msg(
+        "Norm (x - x_ref):                ",
+        f"{np.linalg.norm(results['x'] - get_host(x_ref)):.4e}",
+    )
 
-
-    print_msg("Final theta: ", minimization_result["theta"])
-    print_msg("Final f:", minimization_result["f"])
-    print_msg("final grad_f:", minimization_result["grad_f"])
+    print_msg("\n--- Finished ---")
