@@ -70,11 +70,6 @@ if __name__ == "__main__":
     )
 
     print_msg("\n--- Comparisons ---")
-<<<<<<< HEAD
-    x_ref = xp.load(f"{BASE_DIR}/reference_outputs/x_ref.npy")
-
-=======
->>>>>>> a4e3b95216fb0d343471502ad00844fbef1521c4
     # Compare latent parameters
     x_ref = xp.load(f"{BASE_DIR}/reference_outputs/x_ref.npy")
     print_msg(

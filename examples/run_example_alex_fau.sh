@@ -35,21 +35,24 @@ TIMESTAMP=$(date +"%H-%M-%S")
 base_dir=~
 
 # --- Run Regression Example ---
-#srun python ${base_dir}/pyINLA/examples/regression/run.py --max_iter 100
+srun python ${base_dir}/pyINLA/examples/gr/run.py --max_iter 100
 
 # --- Run Spatial Examples ---
-# srun python ${base_dir}/pyINLA/examples/gs_small/run.py --max_iter 100
+srun python ${base_dir}/pyINLA/examples/gs_small/run.py --max_iter 100
 
 # --- Run Spatio-temporal Examples ---
-# srun python ${base_dir}/pyINLA/examples/gst_small/run.py --solver_min_p 1 --max_iter 100
-# srun python ${base_dir}/pyINLA/examples/gst_medium/run.py --solver_min_p 1 --max_iter 100
-# srun python ${base_dir}/pyINLA/examples/gst_large/run.py --solver_min_p 1 --max_iter 100
+srun python ${base_dir}/pyINLA/examples/gst_small/run.py --solver_min_p 1 --max_iter 100
+srun python ${base_dir}/pyINLA/examples/gst_medium/run.py --solver_min_p 1 --max_iter 100
+srun python ${base_dir}/pyINLA/examples/gst_large/run.py --solver_min_p 1 --max_iter 100
 
 # --- Run Coregional (Spatial) Examples ---
 srun python ${base_dir}/pyINLA/examples/gs_coreg2_small/run.py --max_iter 100
-# srun python ${base_dir}/pyINLA/examples/gs_coreg3_small/run.py --max_iter 100
+srun python ${base_dir}/pyINLA/examples/gs_coreg3_small/run.py --max_iter 100
 
 # --- Run Coregional (Spatio-temporal) Examples ---
-# srun python ${base_dir}/pyINLA/examples/gst_coreg2_small/run.py --solver_min_p 1 --max_iter 100
-# srun python ${base_dir}/pyINLA/examples/gst_coreg3_small/run.py --solver_min_p 1 --max_iter 100
+srun python ${base_dir}/pyINLA/examples/gst_coreg2_small/run.py --solver_min_p 1 --max_iter 100
+srun python ${base_dir}/pyINLA/examples/gst_coreg3_small/run.py --solver_min_p 1 --max_iter 100
 
+# --- Run Poisson Examples ---
+srun python ${base_dir}/pyINLA/examples/pr/run.py --max_iter 100
+srun python ${base_dir}/pyINLA/examples/pst_small/run.py --max_iter 100

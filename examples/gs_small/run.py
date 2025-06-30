@@ -80,12 +80,6 @@ if __name__ == "__main__":
         config=pyinla_config.parse_config(pyinla_dict),
     )
 
-    theta_ref = np.loadtxt(f"{BASE_DIR}/reference_outputs/theta_ref.dat")
-    np.save(f"{BASE_DIR}/reference_outputs/theta_ref.npy", theta_ref)
-
-    x_ref = np.loadtxt(f"{BASE_DIR}/reference_outputs/x_ref.dat")
-    np.save(f"{BASE_DIR}/reference_outputs/x_ref.npy", x_ref)
-
     results = pyinla.run()
 
     print_msg("\n--- Results ---")
