@@ -98,11 +98,8 @@ if __name__ == "__main__":
         f"{np.linalg.norm(results['theta'] - get_host(theta_ref)):.4e}",
     )
 
-    x_ref = np.loadtxt(f"{BASE_DIR}/reference_outputs/mean_latent_parameters_444.txt")
-    np.save(f"{BASE_DIR}/reference_outputs/x_ref.npy", x_ref)
-
     # Compare latent parameters
-    # x_ref = np.load(f"{BASE_DIR}/reference_outputs/x_ref.npy")
+    x_ref = np.load(f"{BASE_DIR}/reference_outputs/x_ref.npy")
     print_msg(
         "Norm (x - x_ref):                ",
         f"{np.linalg.norm(results['x'] - get_host(x_ref)):.4e}",
