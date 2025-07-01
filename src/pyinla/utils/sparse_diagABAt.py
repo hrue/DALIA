@@ -99,7 +99,6 @@ def compute_diagABAt(A, B):
         
         for idx, j in enumerate(cols_A):
             # Get column j of B (in CSC format for fast access)
-            print("j: ", j)
             B_col_j = B_cols[j]
             
             # Find overlapping non-zeros between A[i,:] and B[:,j]

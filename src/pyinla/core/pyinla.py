@@ -105,7 +105,7 @@ class PyINLA:
                 min_group_size=min_solver_size,
             )
         else:
-            self.initial_comm_world = DummyCommunicator
+            self.initial_comm_world = DummyCommunicator()
 
             self.comm_world = DummyCommunicator()
             self.comm_feval = DummyCommunicator()

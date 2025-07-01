@@ -180,7 +180,7 @@ def smartsplit(
     if backend_flags["mpi_avail"]:
         if comm.size < min_group_size:
             raise ValueError(
-                f"Initial CommunicatorType size must be at least {min_group_size} to fullfill the split requirements."
+                f"Initial CommunicatorType size must be at least {min_group_size} to fulfill the split requirements."
             )
 
         # Checks for compatibility of given comm sizes

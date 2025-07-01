@@ -36,32 +36,6 @@ if backend_flags["cupy_avail"]:
         "_compute_coo_block_mask_kernel",
     )
 
-    _compute_coo_block_mask_kernel = cp.RawKernel(
-        r"""
-            extern "C" __global__
-            void _compute_coo_block_mask_kernel(
-                int *rows,
-                int *cols,
-                int row_start,
-                int row_stop,
-                int col_start,
-                int col_stop,
-                bool *mask,
-                int rows_len
-            ){
-                int tid = blockDim.x * blockIdx.x + threadIdx.x;
-                if (tid < rows_len) {
-                    mask[tid] = (
-                        (rows[tid] >= row_start)
-                        && (rows[tid] < row_stop)
-                        && (cols[tid] >= col_start)
-                        && (cols[tid] < col_stop)
-                    );
-                }
-            }
-        """,
-        "_compute_coo_block_mask_kernel",
-    )
 
 def compute_block_sort_index(
     coo_rows: xp.ndarray, coo_cols: xp.ndarray, block_sizes: xp.ndarray
