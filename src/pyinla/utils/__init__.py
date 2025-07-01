@@ -24,7 +24,6 @@ from pyinla.utils.multiprocessing import (
     DummyCommunicator,
 )
 from pyinla.utils.spmatrix_utils import bdiag_tiling, extract_diagonal, memory_footprint
-from pyinla.utils.sparse_diagABAt import compute_diagABAt, sparse_diag_product
 from pyinla.utils.print_utils import add_str_header, align_tables_side_by_side, boxify, ascii_logo
 
 __all__ = [
@@ -49,8 +48,6 @@ __all__ = [
     "extract_diagonal",
     "memory_footprint",
     "free_unused_gpu_memory",
-    "compute_diagABAt",
-    "sparse_diag_product",
     "add_str_header",
     "align_tables_side_by_side",
     "boxify",
