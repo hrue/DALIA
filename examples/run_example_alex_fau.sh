@@ -11,10 +11,9 @@
 #SBATCH --error=%x.err          #The .error file name
 #SBATCH --output=%x.out         #The .output file name
 
-num_ranks=2
-
-backend=cupy
-export ARRAY_MODULE=${backend}
+# --- Set Backend ---
+# The backend can be set to either 'cupy' or 'numpy'.
+export ARRAY_MODULE=cupy
 
 export MPI_CUDA_AWARE=0
 export USE_NCCL=0
