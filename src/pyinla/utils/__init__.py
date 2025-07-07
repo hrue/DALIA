@@ -7,6 +7,8 @@ from pyinla.utils.gpu_utils import (
     get_host,
     set_device,
     free_unused_gpu_memory,
+    memory_report,
+    format_size,
 )
 from pyinla.utils.host import get_host_configuration
 from pyinla.utils.link_functions import cloglog, scaled_logit, sigmoid
@@ -19,8 +21,10 @@ from pyinla.utils.multiprocessing import (
     smartsplit,
     synchronize,
     synchronize_gpu,
+    DummyCommunicator,
 )
 from pyinla.utils.spmatrix_utils import bdiag_tiling, extract_diagonal, memory_footprint
+from pyinla.utils.print_utils import add_str_header, align_tables_side_by_side, boxify, ascii_logo
 
 __all__ = [
     "get_available_devices",
@@ -44,4 +48,11 @@ __all__ = [
     "extract_diagonal",
     "memory_footprint",
     "free_unused_gpu_memory",
+    "add_str_header",
+    "align_tables_side_by_side",
+    "boxify",
+    "ascii_logo",
+    "memory_report",
+    "format_size",
+    "DummyCommunicator",
 ]

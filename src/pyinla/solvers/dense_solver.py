@@ -1,8 +1,5 @@
 # Copyright 2024-2025 pyINLA authors. All rights reserved.
 
-import numpy as np
-from scipy.sparse import random
-
 from pyinla import NDArray, sp, xp
 from pyinla.configs.pyinla_config import SolverConfig
 from pyinla.core.solver import Solver
@@ -33,6 +30,7 @@ class DenseSolver(Solver):
         assert self.n is not None, "The size of the matrix must be provided."
 
         self.L: NDArray = xp.zeros((self.n, self.n), dtype=xp.float64)
+        self.A_inv = None
 
     def cholesky(self, A: NDArray, **kwargs) -> None:
         self.L[:] = A.todense()
@@ -58,9 +56,7 @@ class DenseSolver(Solver):
         return 2 * xp.sum(xp.log(xp.diag(self.L)))
 
     # TODO: optimize for memory??
-    def selected_inversion(self, A: NDArray, **kwargs) -> None:
-        self.L[:] = A.todense()
-        self.L = xp.linalg.cholesky(self.L)
+    def selected_inversion(self, **kwargs) -> None:
 
         L_inv = xp.eye(self.L.shape[0])
         L_inv[:] = sp.linalg.solve_triangular(
@@ -75,3 +71,9 @@ class DenseSolver(Solver):
         B.data = self.A_inv[B.row, B.col]
 
         return B
+
+    def get_solver_memory(self) -> int:
+        """Return the memory used by the solver in number of bytes."""
+        solver_mem = 2 * self.n * self.n * xp.dtype(xp.float64).itemsize
+
+        return solver_mem
