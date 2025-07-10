@@ -131,20 +131,20 @@ class BrainiacSubModel(SubModel):
 
         # --- Make the Submodel table ---
         values = [
-            ["h2", f"{self.config.h2:.3f}"], 
-            ["alpha", f"{self.config.alpha:.3f}"], 
+            ["h2", f"{self.config.h2:.3f}"],
+            ["alpha", [f"{a:.3f}" for a in self.config.alpha]],
         ]
         submodel_table = tabulate(
             values,
             tablefmt="fancy_grid",
             colalign=("left", "center"),
         )
-        
+
         # Add the header title
         submodel_table = add_str_header(
             title=self.submodel_type.replace("_", " ").title(),
             table=submodel_table,
         )
         str_representation += submodel_table
-        
+
         return str_representation

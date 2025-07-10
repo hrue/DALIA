@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import os
 import time
 
@@ -18,12 +17,12 @@ if __name__ == "__main__":
     base_dir = os.path.dirname(os.path.abspath(__file__)) + "/inputs_brainiac_cmPRS"
 
     m = 2  # number of annotations per feature
-    b = 20000  # number of latent variables / number of features
+    b = 1000  # number of latent variables / number of features
     sigma_a2 = 1.0 / 1.0
     precision_mat = sigma_a2 * scsp.eye(m)
 
     theta_ref = xp.load(f"{base_dir}/theta_original.npy")
-    x_ref = xp.load(f"{base_dir}/beta_original.npy")
+    x_ref = np.load(f"{base_dir}/beta_original.npy")
 
     initial_h2 = theta_ref[0]
     initial_alpha = theta_ref[1:]
@@ -156,9 +155,3 @@ if __name__ == "__main__":
     # print Hessian mode
 
     # marginal variances latent parameters
-
-=======
-version https://git-lfs.github.com/spec/v1
-oid sha256:3d490a2e43900fdd153b70f1f0a2349446412dbbf9813058c953b929e7b738da
-size 2567
->>>>>>> e466c8f (make brainiac gpu compatible)

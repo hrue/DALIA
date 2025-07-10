@@ -1,11 +1,8 @@
-<<<<<<< HEAD
-import sys
 import os
-
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-sys.path.append(parent_dir)
+import sys
 
 import numpy as np
+from examples_utils.parser_utils import parse_args
 
 from dalia import xp
 from dalia.configs import likelihood_config, dalia_config, submodels_config
@@ -110,8 +107,3 @@ if __name__ == "__main__":
     )
 
     print_msg("\n--- Finished ---")
-=======
-version https://git-lfs.github.com/spec/v1
-oid sha256:1675e5c356c100205bab69f09641152611cb83a2afffe7d0179a18120e667df8
-size 2119
->>>>>>> 0350d7f (fixed cupy/numpy print run.py gr)
