@@ -15,7 +15,7 @@ lint:
 
 # Runs all non-MPI tests and determines coverage.
 test-cov workers="4":
-	pytest -n {{workers}} --cov=src/pyinla --cov-report=term --cov-report=xml tests/
+	pytest -n {{workers}} --cov=src/dalia --cov-report=term --cov-report=xml tests/
 
 # Runs all tests.
 test: test-cov

@@ -6,11 +6,11 @@ sys.path.append(parent_dir)
 
 import numpy as np
 
-from pyinla.configs import likelihood_config, pyinla_config, submodels_config
-from pyinla.core.model import Model
-from pyinla.core.pyinla import PyINLA
-from pyinla.submodels import RegressionSubModel, SpatioTemporalSubModel
-from pyinla.utils import print_msg, get_host
+from dalia.configs import likelihood_config, dalia_config, submodels_config
+from dalia.core.model import Model
+from dalia.core.dalia import DALIA
+from dalia.submodels import RegressionSubModel, SpatioTemporalSubModel
+from dalia.utils import print_msg, get_host
 from examples_utils.parser_utils import parse_args
 
 path = os.path.dirname(__file__)
@@ -63,8 +63,8 @@ if __name__ == "__main__":
     )
     print_msg(model)
 
-    # Configurations of PyINLA
-    pyinla_dict = {
+    # Configurations of DALIA
+    dalia_dict = {
         "solver": {"type": "dense"},
         "minimize": {
             "max_iter": args.max_iter,
@@ -76,12 +76,12 @@ if __name__ == "__main__":
         "eps_gradient_f": 1e-3,
         "simulation_dir": ".",
     }
-    pyinla = PyINLA(
+    dalia = DALIA(
         model=model,
-        config=pyinla_config.parse_config(pyinla_dict),
+        config=dalia_config.parse_config(dalia_dict),
     )
 
-    minimization_result = pyinla.minimize()
+    minimization_result = dalia.minimize()
 
     print_msg("\n--- Results ---")
     print_msg("Theta values:\n", minimization_result["theta"])

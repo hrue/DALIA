@@ -31,7 +31,7 @@ conda install -c conda-forge pytest pytest-mpi pytest-cov coverage black isort r
 cd /path/to/serinv/
 python -m pip install -e .
 
-cd /path/to/pyinla/
+cd /path/to/dalia/
 python -m pip install -e .
 ```
 
@@ -56,7 +56,7 @@ conda install -c conda-forge pytest pytest-mpi pytest-cov coverage black isort r
 cd /path/to/serinv/
 python -m pip install -e .
 
-cd /path/to/pyinla/
+cd /path/to/dalia/
 python -m pip install -e .
 ```
 
@@ -76,7 +76,7 @@ conda install -c conda-forge pytest pytest-mpi pytest-cov coverage black isort r
 cd /path/to/serinv/
 python -m pip install -e .
 
-cd /path/to/pyinla/
+cd /path/to/dalia/
 python -m pip install -e .
 ```
 
@@ -141,9 +141,9 @@ python -m pip install -e .
 # Run the sequential tests.
 pytest .
 ```
-7. Install pyinla
+7. Install dalia
 ```bash
-cd /path/to/pyinla/
+cd /path/to/dalia/
 python -m pip install -e .
 ```
 

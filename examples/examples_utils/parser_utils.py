@@ -1,7 +1,7 @@
 import argparse
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="PyINLA example parameters")
+    parser = argparse.ArgumentParser(description="DALIA example parameters")
     parser.add_argument(
         "--max_iter",
         type=int,

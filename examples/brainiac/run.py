@@ -3,11 +3,11 @@ import os
 import numpy as np
 import scipy.sparse as sp
 
-from pyinla.configs import likelihood_config, pyinla_config, submodels_config
-from pyinla.core.model import Model
-from pyinla.core.pyinla import PyINLA
-from pyinla.submodels import BrainiacSubModel
-from pyinla.utils import scaled_logit
+from dalia.configs import likelihood_config, dalia_config, submodels_config
+from dalia.core.model import Model
+from dalia.core.dalia import DALIA
+from dalia.submodels import BrainiacSubModel
+from dalia.utils import scaled_logit
 
 path = os.path.dirname(__file__)
 
@@ -96,7 +96,7 @@ if __name__ == "__main__":
     # plt.suptitle("Q_conditional from brainiac model")
     # plt.savefig("Q_conditional.png")
 
-    pyinla_dict = {
+    dalia_dict = {
         # "solver": {"type": "serinv"},
         "solver": {"type": "dense"},
         "minimize": {
@@ -109,15 +109,15 @@ if __name__ == "__main__":
         "eps_gradient_f": 1e-3,
         "simulation_dir": ".",
     }
-    pyinla = PyINLA(
+    dalia = DALIA(
         model=model,
-        config=pyinla_config.parse_config(pyinla_dict),
+        config=dalia_config.parse_config(dalia_dict),
     )
 
     print("x ref: ", x_ref)
-    # minimization_result = pyinla.minimize()
+    # minimization_result = dalia.minimize()
 
-    # output = pyinla._evaluate_f(model.theta)
+    # output = dalia._evaluate_f(model.theta)
     # x = model.x
     # print("x: ", x)
 
@@ -131,7 +131,7 @@ if __name__ == "__main__":
     # print("x_ref", x_ref)
     # print("norm(x_ref - x) = ", np.linalg.norm(x_ref - x))
 
-    results = pyinla.run()
+    results = dalia.run()
 
     print("theta_ref: ", theta_ref)
     theta = results["theta"]

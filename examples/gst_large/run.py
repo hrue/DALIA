@@ -5,14 +5,14 @@ import numpy as np
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(parent_dir)
 
-from pyinla import xp
+from dalia import xp
 
-from pyinla.configs import likelihood_config, pyinla_config, submodels_config
-from pyinla.core.model import Model
-from pyinla.core.pyinla import PyINLA
-from pyinla.submodels import RegressionSubModel, SpatioTemporalSubModel
+from dalia.configs import likelihood_config, dalia_config, submodels_config
+from dalia.core.model import Model
+from dalia.core.dalia import DALIA
+from dalia.submodels import RegressionSubModel, SpatioTemporalSubModel
 from examples_utils.parser_utils import parse_args
-from pyinla.utils import print_msg, get_host
+from dalia.utils import print_msg, get_host
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -65,8 +65,8 @@ if __name__ == "__main__":
     )
     print_msg(model)
 
-    # Configurations of PyINLA
-    pyinla_dict = {
+    # Configurations of DALIA
+    dalia_dict = {
         "solver": {"type": "serinv", "min_processes": args.solver_min_p},
         "minimize": {"max_iter": args.max_iter, "gtol": 1e-1, "disp": True},
         "inner_iteration_max_iter": 50,
@@ -74,16 +74,16 @@ if __name__ == "__main__":
         "eps_gradient_f": 1e-3,
         "simulation_dir": ".",
     }
-    pyinla = PyINLA(
+    dalia = DALIA(
         model=model,
-        config=pyinla_config.parse_config(pyinla_dict),
+        config=dalia_config.parse_config(dalia_dict),
     )
     
     # print_msg("\n--- References ---")
     theta_ref = xp.array(np.load(f"{BASE_DIR}/reference_outputs/theta_ref.npy"))
     x_ref = xp.array(np.load(f"{BASE_DIR}/reference_outputs/x_ref.npy"))
 
-    results = pyinla.run()
+    results = dalia.run()
     
     print_msg("\n--- Results ---")
     print_msg("Theta values:\n", results["theta"])

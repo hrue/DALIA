@@ -1,3 +1,11 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:a7ba6d5ca7c8f4226e220ee164a2761885624b55563677e3a215ae9d257587a6
-size 264
+# Gaussian likelihood, Regression submodel example
+
+--- Model ---
+    n_hyperparameters: 1
+    n_latent_parameters: 6
+    n_observations: 1000
+    likelihood: gaussian
+    
+--- RegressionSubModel ---
+    n_fixed_effects: 6
+    fixed_effects_prior_precision: 0.001

@@ -23,7 +23,7 @@ TIMESTAMP=$(date +"%H-%M-%S")
 # --- How to Run ---
 # This run script is designed to run on Alex at NHR@FAU
 # It uses SLURM for job scheduling and assumes that the user has a working 
-# installation of pyINLA and its dependencies. By default, PyINLA will exploit  
+# installation of DALIA and its dependencies. By default, DALIA will exploit  
 # job parallelism at the parallel function evaluation level.
 
 # --- Parameters ---
@@ -34,24 +34,24 @@ TIMESTAMP=$(date +"%H-%M-%S")
 base_dir=~
 
 # --- Run Regression Example ---
-srun python ${base_dir}/pyINLA/examples/gr/run.py --max_iter 100
+srun python ${base_dir}/DALIA/examples/gr/run.py --max_iter 100
 
 # --- Run Spatial Examples ---
-srun python ${base_dir}/pyINLA/examples/gs_small/run.py --max_iter 100
+srun python ${base_dir}/DALIA/examples/gs_small/run.py --max_iter 100
 
 # --- Run Spatio-temporal Examples ---
-srun python ${base_dir}/pyINLA/examples/gst_small/run.py --solver_min_p 1 --max_iter 100
-srun python ${base_dir}/pyINLA/examples/gst_medium/run.py --solver_min_p 1 --max_iter 100
-srun python ${base_dir}/pyINLA/examples/gst_large/run.py --solver_min_p 1 --max_iter 100
+srun python ${base_dir}/DALIA/examples/gst_small/run.py --solver_min_p 1 --max_iter 100
+srun python ${base_dir}/DALIA/examples/gst_medium/run.py --solver_min_p 1 --max_iter 100
+srun python ${base_dir}/DALIA/examples/gst_large/run.py --solver_min_p 1 --max_iter 100
 
 # --- Run Coregional (Spatial) Examples ---
-srun python ${base_dir}/pyINLA/examples/gs_coreg2_small/run.py --max_iter 100
-srun python ${base_dir}/pyINLA/examples/gs_coreg3_small/run.py --max_iter 100
+srun python ${base_dir}/DALIA/examples/gs_coreg2_small/run.py --max_iter 100
+srun python ${base_dir}/DALIA/examples/gs_coreg3_small/run.py --max_iter 100
 
 # --- Run Coregional (Spatio-temporal) Examples ---
-srun python ${base_dir}/pyINLA/examples/gst_coreg2_small/run.py --solver_min_p 1 --max_iter 100
-srun python ${base_dir}/pyINLA/examples/gst_coreg3_small/run.py --solver_min_p 1 --max_iter 100
+srun python ${base_dir}/DALIA/examples/gst_coreg2_small/run.py --solver_min_p 1 --max_iter 100
+srun python ${base_dir}/DALIA/examples/gst_coreg3_small/run.py --solver_min_p 1 --max_iter 100
 
 # --- Run Poisson Examples ---
-srun python ${base_dir}/pyINLA/examples/pr/run.py --max_iter 100
-srun python ${base_dir}/pyINLA/examples/pst_small/run.py --max_iter 100
+srun python ${base_dir}/DALIA/examples/pr/run.py --max_iter 100
+srun python ${base_dir}/DALIA/examples/pst_small/run.py --max_iter 100

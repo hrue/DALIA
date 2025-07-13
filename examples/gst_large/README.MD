@@ -1,3 +1,18 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:fe953bf9dde21dc170ac992e0c37826c31ed86a1810720f99c727dfa7b7736d7
-size 418
+# Gaussian likelihood, Regression + Spatio-Temporal submodel example
+
+This example contain a large spatio-temporal model.
+
+--- Model ---
+    n_hyperparameters: 4
+    n_latent_parameters: 1000506
+    n_observations: 2001000
+    likelihood: gaussian
+
+--- SpatioTemporalSubModel ---
+    ns: 4002
+    nt: 250
+    manifold: plane
+ 
+--- RegressionSubModel ---
+    n_fixed_effects: 6
+    fixed_effects_prior_precision: 0.001
