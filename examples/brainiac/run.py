@@ -5,11 +5,12 @@ import time
 import numpy as np
 import scipy.sparse as scsp
 
-from dalia.configs import likelihood_config, dalia_config, submodels_config
-from dalia.core.model import Model
+from dalia import xp
+from dalia.configs import dalia_config, likelihood_config, submodels_config
 from dalia.core.dalia import DALIA
+from dalia.core.model import Model
 from dalia.submodels import BrainiacSubModel
-from dalia.utils import xp, print_msg
+from dalia.utils import print_msg
 
 path = os.path.dirname(__file__)
 
@@ -24,8 +25,10 @@ if __name__ == "__main__":
     theta_ref = xp.load(f"{base_dir}/theta_original.npy")
     x_ref = np.load(f"{base_dir}/beta_original.npy")
 
-    initial_h2 = theta_ref[0]
-    initial_alpha = theta_ref[1:]
+    xp.random.seed(5)
+    # has to be between 0 and 1
+    initial_h2 = theta_ref[0] - 0.1
+    initial_alpha = theta_ref[1:] + 0.5 * xp.random.randn(m - 1)
 
     brainiac_dict = {
         "type": "brainiac",
@@ -56,50 +59,7 @@ if __name__ == "__main__":
 
     print("Model initialized.")
 
-<<<<<<< HEAD
-    print("model.theta", model.theta)
-    print("length(model.theta)", len(model.theta))
-    print("model.theta_keys", model.theta_keys)
-
-    eta = np.ones((model.n_observations, 1))
-
-    model.construct_Q_prior()
-    model.construct_Q_conditional(eta)
-
-    # compare to reference solution
-    Qprior_ref = sp.load_npz(f"{base_dir}/inputs_brainiac/Qprior_original.npz")
-    Qcond_ref = sp.load_npz(f"{base_dir}/inputs_brainiac/Qconditional_original.npz")
-
-    print("Qcond_ref\n", Qcond_ref.toarray())
-    print("Qcond\n", model.Q_conditional.toarray())
-
-    print(
-        "norm(Qprior_ref - model.Q_prior) = ",
-        np.linalg.norm((Qprior_ref - model.Q_prior).toarray()),
-    )
-    print(
-        "norm(Qcond_ref - model.Q_conditional) = ",
-        np.linalg.norm((Qcond_ref - model.Q_conditional).toarray()),
-    )
-
-    # Q_prior_dense = model.Q_prior.todense()
-    # print("Q_prior_dense\n", Q_prior_dense)
-    # Q_cond_dense = model.Q_conditional.todense()
-    # print("Q_cond_dense\n", Q_cond_dense)
-
-    # plt.matshow(Q_prior_dense)
-    # plt.suptitle("Q_prior from brainiac model")
-    # plt.savefig("Q_prior.png")
-
-    # plt.matshow(Q_cond_dense)
-    # plt.suptitle("Q_conditional from brainiac model")
-    # plt.savefig("Q_conditional.png")
-
     dalia_dict = {
-        # "solver": {"type": "serinv"},
-=======
-    pyinla_dict = {
->>>>>>> 52192c0 (light cleanup)
         "solver": {"type": "dense"},
         "minimize": {
             "max_iter": 50,
@@ -116,42 +76,25 @@ if __name__ == "__main__":
         config=dalia_config.parse_config(dalia_dict),
     )
 
-<<<<<<< HEAD
-    print("x ref: ", x_ref)
-    # minimization_result = dalia.minimize()
-
-    # output = dalia._evaluate_f(model.theta)
-    # x = model.x
-    # print("x: ", x)
-
-    print("\n------ Compare to reference solution ------\n")
-    # load reference solution
-    # theta_ref = np.load(f"{base_dir}/inputs_brainiac/theta_original.npy")
-
-    # x_ref = np.load(f"{base_dir}/inputs_brainiac/beta_original.npy")
-    # x = minimization_result["x"]
-    # print("\nx    ", x)
-    # print("x_ref", x_ref)
-    # print("norm(x_ref - x) = ", np.linalg.norm(x_ref - x))
-
-    results = dalia.run()
-
-=======
     tic = time.time()
-    minimization_result = pyinla.run()
+    result = dalia.run()
     toc = time.time()
-    print("Elapsed time pyinla.run(): ", toc - tic)
+    print("Elapsed time dalia.run(): ", toc - tic)
 
     print("\n------ Compare to reference solution ------\n")
->>>>>>> 52192c0 (light cleanup)
     print("theta_ref: ", theta_ref)
 
-    theta = minimization_result["theta_interpret"]
+    theta = result["theta_interpret"]
     print("theta_interpret:", theta)
 
-    x = minimization_result["x"]
+    x = result["x"]
     print("norm(x_ref - x) = ", np.linalg.norm(x_ref - x))
 
-    # print Hessian mode
-
     # marginal variances latent parameters
+    var_latent_params = result["marginal_variances_latent"]
+    Qconditional = dalia.model.construct_Q_conditional(eta=model.a @ model.x)
+    Qinv_ref = xp.linalg.inv(Qconditional)
+    print_msg(
+        "Norm (marg var latent - ref):    ",
+        f"{np.linalg.norm(var_latent_params - xp.diag(Qinv_ref)):.4e}",
+    )

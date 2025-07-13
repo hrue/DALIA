@@ -2,15 +2,17 @@ import os
 import sys
 
 import numpy as np
-from examples_utils.parser_utils import parse_args
 
 from dalia import xp
-from dalia.configs import likelihood_config, dalia_config, submodels_config
-from dalia.core.model import Model
+from dalia.configs import dalia_config, likelihood_config, submodels_config
 from dalia.core.dalia import DALIA
+from dalia.core.model import Model
 from dalia.submodels import RegressionSubModel
 from dalia.utils import extract_diagonal, get_host, print_msg
-from examples_utils.parser_utils import parse_args
+
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(parent_dir)
+from examples_utils.parser_utils import parse_args  # noqa: E402
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 

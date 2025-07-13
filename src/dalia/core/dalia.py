@@ -5,11 +5,13 @@ import logging
 from scipy import optimize
 from tabulate import tabulate
 
-from dalia import ArrayLike, NDArray, backend_flags, comm_rank, comm_size, xp, sp
+from dalia import ArrayLike, NDArray, backend_flags, comm_rank, comm_size, sp, xp
 from dalia.configs.dalia_config import DaliaConfig
 from dalia.core.model import Model
 from dalia.solvers import DenseSolver, DistSerinvSolver, SerinvSolver, SparseSolver
 from dalia.utils import (
+    DummyCommunicator,
+    add_str_header,
     allreduce,
     ascii_logo,
     boxify,
@@ -836,8 +838,6 @@ class DALIA:
         if n_feval_comm > no_eval:
             print("No idea what happens with MPI split here.")
             raise ValueError("no_eval > 2*loop_dim")
-
-        print("n_feval_comm: ", n_feval_comm)
 
         task_mapping = []
         for i in range(no_eval):
