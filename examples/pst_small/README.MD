@@ -1,3 +1,18 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:8f36439378dcaa2c6d92b7a7b5d449b429044bd2a2f8553b293bdd07aa54318c
-size 407
+# Poisson likelihood, Regression + Spatio-Temporal submodel example
+
+This example contains a small spatio-temporal model.
+
+--- Model ---
+    n_hyperparameters: 3
+    n_latent_parameters: 2272
+    n_observations: 13656
+    likelihood: poisson
+
+--- SpatioTemporalSubModel ---
+    ns: 283
+    nt: 8
+    manifold: plane
+
+--- RegressionSubModel ---
+    n_fixed_effects: 8
+    fixed_effects_prior_precision: 0.001

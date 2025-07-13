@@ -1,3 +1,11 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:e7a86d45345976b54b9f43d01d122f7d20f1a994510f674435684e8acfd53e27
-size 258
+# Poisson likelihood, Regression submodel example
+
+--- Model ---
+    n_hyperparameters: 0
+    n_latent_parameters: 6
+    n_observations: 1000
+    likelihood: poisson
+
+--- RegressionSubModel ---
+    n_fixed_effects: 6
+    fixed_effects_prior_precision: 0.001

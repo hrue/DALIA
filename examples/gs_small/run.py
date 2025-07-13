@@ -6,12 +6,12 @@ sys.path.append(parent_dir)
 
 import numpy as np
 
-from pyinla import xp, backend_flags
-from pyinla.configs import likelihood_config, pyinla_config, submodels_config
-from pyinla.core.model import Model
-from pyinla.core.pyinla import PyINLA
-from pyinla.submodels import RegressionSubModel, SpatialSubModel
-from pyinla.utils import get_host, print_msg  # , extract_diagonal
+from dalia import xp, backend_flags
+from dalia.configs import likelihood_config, dalia_config, submodels_config
+from dalia.core.model import Model
+from dalia.core.dalia import DALIA
+from dalia.submodels import RegressionSubModel, SpatialSubModel
+from dalia.utils import get_host, print_msg  # , extract_diagonal
 from examples_utils.parser_utils import parse_args
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -58,8 +58,8 @@ if __name__ == "__main__":
         likelihood_config=likelihood_config.parse_config(likelihood_dict),
     )
 
-    # Configurations of PyINLA
-    pyinla_dict = {
+    # Configurations of DALIA
+    dalia_dict = {
         "solver": {"type": "dense"},
         "minimize": {
             "max_iter": args.max_iter,
@@ -75,12 +75,12 @@ if __name__ == "__main__":
         "simulation_dir": ".",
     }
 
-    pyinla = PyINLA(
+    dalia = DALIA(
         model=model,
-        config=pyinla_config.parse_config(pyinla_dict),
+        config=dalia_config.parse_config(dalia_dict),
     )
 
-    results = pyinla.run()
+    results = dalia.run()
 
     print_msg("\n--- Results ---")
     print_msg("Theta values:\n", results["theta"])
@@ -107,7 +107,7 @@ if __name__ == "__main__":
 
     # Compare marginal variances of latent parameters
     var_latent_params = results["marginal_variances_latent"]
-    Qconditional = pyinla.model.construct_Q_conditional(eta=model.a @ model.x)
+    Qconditional = dalia.model.construct_Q_conditional(eta=model.a @ model.x)
     Qinv_ref = xp.linalg.inv(Qconditional.toarray())
     print_msg(
         "Norm (marg var latent - ref):    ",
@@ -115,7 +115,7 @@ if __name__ == "__main__":
     )
 
     # Compare marginal variances of observations
-    # var_obs = pyinla.get_marginal_variances_observations(theta=theta_ref, x_star=x_ref)
+    # var_obs = dalia.get_marginal_variances_observations(theta=theta_ref, x_star=x_ref)
     # var_obs_ref = extract_diagonal(model.a @ Qinv_ref @ model.a.T)
     # print_msg(
     #     "Norm (var_obs - var_obs_ref):    ",
