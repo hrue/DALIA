@@ -1,8 +1,8 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/psf/black)
 
-# DALIA (DALIA)
+# DALIA
 Python implementation of the methodology of integrated nested Laplace approximations (INLA), putting the accent on portability, modularity and performance.
-This project, DALIA, is for now also refered to as DALIA. A branding change from one to the other is in progress.
+This project was formerly also known as PyINLA.
 
 If you want to help us in the developement of DALIA, you can fill the following `missing features` survey: https://forms.gle/o4CxBDcr1t73pBHbA
 
