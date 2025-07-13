@@ -1,6 +1,6 @@
 # Poisson likelihood, Regression + Spatio-Temporal submodel example
 
-This example contain a small spatio-temporal model.
+This example contains a small spatio-temporal model.
 
 --- Model ---
     n_hyperparameters: 3
