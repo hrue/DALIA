@@ -1,8 +1,7 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/psf/black)
 
 # DALIA
-Python implementation of the methodology of integrated nested Laplace approximations (INLA), putting the accent on portability, modularity and performance.
-This project was formerly also known as PyINLA.
+Python implementation of the methodology of integrated nested Laplace approximations (INLA), putting the accent on portability, modularity and performance (formerly known as PyINLA).
 
 If you want to help us in the developement of DALIA, you can fill the following `missing features` survey: https://forms.gle/o4CxBDcr1t73pBHbA
 
@@ -33,6 +32,7 @@ cd /path/to/dalia/
 python -m pip install -e .
 ```
 
+We then recommend you to run some of the examples provided in the `examples/` directory to test your installation.
 For more detailed installation instructions, especially on clusters, leveraging GPU acceleration through `CuPy` and distributed computing through `MPI4Py`, please refer to the [dev note](DEV_README.md) in the `DEV_README.md` file.
 
 ## Examples
@@ -42,6 +42,10 @@ git lfs pull
 git lfs checkout
 ```
 
+You can then navigate in the `examples/` directory and run the given examples. For example, to run a Gaussian Spatio-Temporal model, you can run:
+```bash
+python gst_small/run.py
+```
 
 ## Known Installation Issues
 The `sqlite` module might not work properly. Forcing the following version of `sqlite` might help:
