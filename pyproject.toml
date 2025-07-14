@@ -3,7 +3,7 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pyINLA"
+name = "DALIA"
 authors = [
     { name = "Lisa Gaedke-Merzhaeuser", email = "lisa.gaedke.merzhaeuser@usi.ch" },
     { name = "Vincent Maillou", email = "vmaillou@iis.ee.ethz.ch" },
@@ -40,10 +40,10 @@ cupy = ["cupy==13.2.0"]
 serinv = ["serinv @ git+https://github.com/vincent-maillou/serinv"]
 
 [project.urls]
-Code = "https://github.com/lisa-gm/pyINLA"
+Code = "https://github.com/lisa-gm/DALIA"
 
 [tool.setuptools.dynamic]
-version = { attr = "pyinla.__about__.__version__" }
+version = { attr = "dalia.__about__.__version__" }
 
 [tool.pytest.ini_options]
 addopts = ["--import-mode=importlib"]
