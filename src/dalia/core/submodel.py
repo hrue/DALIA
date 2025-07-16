@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 
 import numpy as np
-from scipy.sparse import csc_matrix, load_npz, spmatrix
+from scipy.sparse import load_npz, spmatrix
 
 from dalia import NDArray, sp, xp
 from dalia.configs.submodels_config import SubModelConfig
@@ -25,11 +25,8 @@ class SubModel(ABC):
         # --- Load design matrix
 
         try:
-            a: spmatrix = csc_matrix(load_npz(self.input_path.joinpath("a.npz")))
-            if xp == np:
-                self.a: sp.sparse.spmatrix = a
-            else:
-                self.a: sp.sparse.spmatrix = sp.sparse.csc_matrix(a)
+            a: spmatrix = load_npz(self.input_path.joinpath("a.npz"))
+            self.a = sp.sparse.csc_matrix(a)
         except FileNotFoundError:
             # check if dense a matrix exists
             try:
@@ -56,8 +53,10 @@ class SubModel(ABC):
             self.x_initial: NDArray = xp.zeros((self.a.shape[1]), dtype=float)
 
     def rescale_hyperparameters_to_interpret(self, theta: NDArray) -> NDArray:
-        """Rescale hyperparameters to interpret them. Does nothing unless implemented in specific submodel."""
-        # print('not working properly for precision observations with the indexing ...')
+        """Rescale hyperparameters to interpret them.  Does nothing unless implemented in specific submodel.
+
+        Note: It doesnt include the hyperparameters from the likelihood. If they need rescaling too. Needs to be done in likelihood.
+        """
 
         return theta
 
@@ -68,14 +67,9 @@ class SubModel(ABC):
 
     def load_a_predict(self) -> sp.sparse.csc_matrix:
         """Load the design matrix for prediction."""
-        a_predict: sp.sparse.csc_matrix = csc_matrix(
+        self.a_predict: sp.sparse.csc_matrix = sp.sparse.csc_matrix(
             load_npz(self.input_path.joinpath("apr.npz"))
         )
-
-        if xp == np:
-            self.a_predict: sp.sparse.spmatrix = a_predict
-        else:
-            self.a_predict: sp.sparse.spmatrix = sp.sparse.csc_matrix(a_predict)
 
         # check that number of columns is the same as in a
         if self.a_predict.shape[1] != self.a.shape[1]:

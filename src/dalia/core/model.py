@@ -31,7 +31,8 @@ from dalia.submodels import (
     SpatialSubModel,
     SpatioTemporalSubModel,
 )
-from dalia.utils import scaled_logit, add_str_header, boxify
+from dalia.utils import add_str_header, boxify, scaled_logit
+
 
 class Model(ABC):
     """Core class for statistical models."""
@@ -190,9 +191,6 @@ class Model(ABC):
             lh_hyperparameters_keys,
         ) = likelihood_config.read_hyperparameters()
 
-        ## TODO: cant do that because we call self.hyperparameters_idx[-1] but im not sure what makes more sense ...
-        # self.hyperparameters_idx[-1] += len(lh_hyperparameters)
-
         theta.append(lh_hyperparameters)
         self.theta: NDArray = xp.concatenate(theta)
 
@@ -212,13 +210,7 @@ class Model(ABC):
         self.x: NDArray = xp.zeros(self.n_latent_parameters)
 
         # check if all a are sparse -> if not construct dense a
-        a_is_sparse = True
-        for i, submodel in enumerate(self.submodels):
-            if not sp.sparse.issparse(submodel.a):
-                a_is_sparse = False
-                break
-
-        if a_is_sparse:
+        if all(sp.sparse.issparse(submodel.a) for submodel in self.submodels):
             data = []
             rows = []
             cols = []
@@ -255,9 +247,10 @@ class Model(ABC):
 
             self.a: NDArray = xp.concatenate(data, axis=1)
 
-        # TODO: not so efficient ...
-        self.permutation_latent_variables = xp.arange(self.n_latent_parameters)
-        self.inverse_permutation_latent_variables = xp.arange(self.n_latent_parameters)
+        self.permutation_latent_variables = xp.arange(0, self.n_latent_parameters, 1)
+        self.inverse_permutation_latent_variables = xp.arange(
+            0, self.n_latent_parameters, 1
+        )
 
         # if data is gaussian compute t(A)*A once
         if likelihood_config.type == "gaussian":
@@ -281,7 +274,6 @@ class Model(ABC):
         self.n_observations: int = self.y.shape[0]
 
         # --- Initialize likelihood
-        # TODO: clean this -> so that for brainiac model we don't add additional hyperperameter
         if likelihood_config.type == "gaussian":
             self.likelihood: Likelihood = GaussianLikelihood(
                 n_observations=self.n_observations,
@@ -423,12 +415,6 @@ class Model(ABC):
 
         """
 
-        # TODO: need to vectorize
-        # hessian_likelihood_diag = hessian_diag_finite_difference_5pt(
-        #     self.likelihood.evaluate_likelihood, eta, self.y, theta_likelihood
-        # )
-        # hessian_likelihood = diags(hessian_likelihood_diag)
-
         if self.likelihood_config.type == "gaussian":
             kwargs = {
                 "eta": eta,
@@ -447,7 +433,6 @@ class Model(ABC):
             # General rules
             d_matrix = self.likelihood.evaluate_hessian_likelihood(**kwargs)
 
-        ## TODO: i know its ugly ... sorry ...
         # if self.a is sparse -> Q_conditional should be sparse, else dense
         if sp.sparse.issparse(self.a):
             if self.aTa is not None:
@@ -507,7 +492,6 @@ class Model(ABC):
             #
             theta_interpret = self.theta.copy()
             theta_interpret[0] = scaled_logit(self.theta[0], direction="backward")
-            # TODO: multivariate prior for a ... need to generalize for now:
             log_prior += self.prior_hyperparameters[0].evaluate_log_prior(
                 theta_interpret[0]
             )

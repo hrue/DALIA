@@ -854,23 +854,17 @@ class DALIA:
             i = k // dim_theta
             j = k % dim_theta
 
-            # print("k = ", k, " theta_i: ", theta_i, flush=True)
-
             # diagonal elements
             if i == j:
-                # print("k = ", k, " in i ==j. theta_i: ", theta_i, flush=True)
-
                 if self.color_feval == task_mapping[counter]:
                     # theta+eps_i
                     theta_i = theta_internal.copy()
-                    # print("k = ", k, " in if statement. theta_i: ", theta_i, flush=True)
                     f_ii_loc[0, i] = self._evaluate_f(theta_i + eps_mat[i, :])
                 counter += 1
 
                 if self.color_feval == task_mapping[counter]:
                     # theta-eps_i
                     theta_i = theta_internal.copy()
-                    # print("k = ", k, " after copy. theta_i: ", theta_i, flush=True)
                     f_ii_loc[2, i] = self._evaluate_f(theta_i - eps_mat[i, :])
 
                 counter += 1

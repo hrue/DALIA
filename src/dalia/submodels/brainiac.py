@@ -1,13 +1,11 @@
 # Copyright 2024-2025 DALIA authors. All rights reserved.
+import numpy as np
 from tabulate import tabulate
 
-from dalia import sp, NDArray
+from dalia import NDArray, sp, xp
 from dalia.configs.submodels_config import BrainiacSubModelConfig
 from dalia.core.submodel import SubModel
-from dalia.utils import scaled_logit, add_str_header
-
-import numpy as np
-from dalia import sp, xp
+from dalia.utils import add_str_header, scaled_logit
 
 
 class BrainiacSubModel(SubModel):
@@ -57,7 +55,7 @@ class BrainiacSubModel(SubModel):
         # rescale h2 to (0,1) as it's currently between -INF:+INF
         h2 = scaled_logit(h2_scaled, direction="backward")
 
-        theta_interpret = np.concatenate((xp.array([h2]), theta[1:]))
+        theta_interpret = xp.concatenate((xp.array([h2]), theta[1:]))
         return theta_interpret
 
     def construct_Q_prior(self, **kwargs) -> sp.sparse.coo_matrix:
