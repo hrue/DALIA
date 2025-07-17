@@ -15,6 +15,7 @@ class SolverConfig(BaseModel):
     min_processes: PositiveInt = 1
 
 
+
 class BFGSConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
