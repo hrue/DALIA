@@ -8,7 +8,7 @@ from tabulate import tabulate
 from dalia import ArrayLike, NDArray, backend_flags, comm_rank, comm_size, sp, xp
 from dalia.configs.dalia_config import DaliaConfig
 from dalia.core.model import Model
-from dalia.solvers import DenseSolver, DistSerinvSolver, SerinvSolver, SparseSolver
+from dalia.solvers import DenseSolver, DistSerinvSolver, SerinvSolver, SparseSolver, SparsePardisoSolver
 from dalia.utils import (
     DummyCommunicator,
     add_str_header,
@@ -119,16 +119,33 @@ class DALIA:
 
         free_unused_gpu_memory()
 
-        # --- Initialize solver
+        # --- Initialize solvers (always two solvers for flexibility)
+        self.solverQp = None  # Solver for Q_prior operations
+        self.solverQc = None  # Solver for Q_conditional operations
+        
         if self.config.solver.type == "dense":
-            self.solver = DenseSolver(
+            dense_solver = DenseSolver(
                 config=self.config.solver,
                 n=self.model.n_latent_parameters,
             )
+            # For dense solver, use the same solver for both operations
+            self.solverQp = self.solverQc = dense_solver
+            
         elif self.config.solver.type == "scipy":
-            self.solver = SparseSolver(
+            sparse_solver = SparseSolver(
                 config=self.config.solver,
             )
+            self.solverQp = self.solverQc = sparse_solver
+
+        elif self.config.solver.type == "pardiso":
+            # initialize two separate solvers to reuse symbolic factorization of each
+            self.solverQp = SparsePardisoSolver(
+                config=self.config.solver,
+            )
+            self.solverQc = SparsePardisoSolver(
+                config=self.config.solver,
+            )
+            
         elif self.config.solver.type == "serinv":
             serinv_parameters = model.get_solver_parameters()
             diagonal_blocksize: int = serinv_parameters["diagonal_blocksize"]
@@ -144,12 +161,14 @@ class DALIA:
 
             n_processes_solver = self.comm_qeval.size
             if n_processes_solver == 1:
-                self.solver = SerinvSolver(
+                serinv_solver = SerinvSolver(
                     config=self.config.solver,
                     diagonal_blocksize=diagonal_blocksize,
                     arrowhead_blocksize=arrowhead_blocksize,
                     n_diag_blocks=n_diag_blocks,
                 )
+                # For serinv, use the same solver for both operations
+                self.solverQp = self.solverQc = serinv_solver
             else:
                 # Distributed solver checks
                 if not backend_flags["mpi_avail"]:
@@ -181,7 +200,7 @@ class DALIA:
                     )
                     synchronize(comm=self.comm_world)
 
-                self.solver = DistSerinvSolver(
+                dist_serinv_solver = DistSerinvSolver(
                     config=self.config.solver,
                     diagonal_blocksize=diagonal_blocksize,
                     arrowhead_blocksize=arrowhead_blocksize,
@@ -189,6 +208,8 @@ class DALIA:
                     comm=self.comm_qeval,
                     nccl_comm=self.nccl_comm,
                 )
+                # For distributed serinv, use the same solver for both operations
+                self.solverQp = self.solverQc = dist_serinv_solver
 
         # --- Set up recurrent variables
         self.gradient_f = xp.zeros(self.model.n_hyperparameters, dtype=xp.float64)
@@ -213,9 +234,11 @@ class DALIA:
         # --- Timers
         self.t_construction_qprior = 0.0
         self.t_construction_qconditional = 0.0
-        self.solver.t_cholesky = 0.0
-        self.solver.t_solve = 0.0
-
+        self.solverQp.t_cholesky = 0.0
+        self.solverQp.t_solve = 0.0
+        self.solverQc.t_cholesky = 0.0
+        self.solverQc.t_solve = 0.0
+        
         self._print_init()
 
         logging.info("DALIA initialized.")
@@ -277,10 +300,28 @@ class DALIA:
 
         # Memory usage header
         used_memory, available_memory = memory_report()
+        
+        # Calculate memory usage - check if solvers are the same instance
+        qp_solver_memory = self.solverQp.get_solver_memory()
+        if self.solverQp is self.solverQc:
+            # Same solver instance used for both operations
+            qc_solver_memory = 0  # Don't double count
+            total_solver_memory = qp_solver_memory
+            solver_status = "Shared"
+        else:
+            # Different solver instances
+            qc_solver_memory = self.solverQc.get_solver_memory()
+            total_solver_memory = qp_solver_memory + qc_solver_memory
+            solver_status = "Separate"
+        
         memory_usage_values = [
-            ["Solver memory", format_size(self.solver.get_solver_memory())],
-            ["Total memory used", format_size(used_memory)],
-            ["Total memory available", format_size(available_memory)],
+            ["Solver Type", self.config.solver.type],
+            ["Q_prior solver memory", format_size(qp_solver_memory)], 
+            ["Q_conditional solver memory", format_size(qc_solver_memory)], 
+            ["Solver instances", solver_status],
+            ["Total solver memory", format_size(total_solver_memory)], 
+            ["Total memory used", format_size(used_memory)], 
+            ["Total memory available", format_size(available_memory)], 
         ]
         memory_usage_table = tabulate(
             memory_usage_values,
@@ -545,8 +586,10 @@ class DALIA:
 
         self.t_construction_qprior = 0.0
         self.t_construction_qconditional = 0.0
-        self.solver.t_cholesky = 0.0
-        self.solver.t_solve = 0.0
+        self.solverQp.t_cholesky = 0.0
+        self.solverQp.t_solve = 0.0
+        self.solverQc.t_cholesky = 0.0
+        self.solverQc.t_solve = 0.0
 
         synchronize(comm=self.comm_world)
         tic = time.perf_counter()
@@ -602,7 +645,7 @@ class DALIA:
         synchronize(comm=self.comm_world)
         toc = time.perf_counter()
         self.objective_function_time.append(toc - tic)
-        self.solver_time.append(self.solver.t_cholesky + self.solver.t_solve)
+        self.solver_time.append(self.solverQp.t_cholesky + self.solverQp.t_solve + self.solverQc.t_cholesky + self.solverQc.t_solve)
         self.construction_time.append(
             self.t_construction_qprior + self.t_construction_qconditional
         )
@@ -672,14 +715,14 @@ class DALIA:
                 toc = time.perf_counter()
                 self.t_construction_qconditional += toc - tic
 
-                self.solver.cholesky(A=Q_conditional, sparsity="bta")
+                self.solverQc.cholesky(A=Q_conditional, sparsity="bta")
 
                 rhs: NDArray = self.model.construct_information_vector(
                     eta,
                     x,
                 )
 
-                self.model.x[:] = self.solver.solve(
+                self.model.x[:] = self.solverQc.solve(
                     rhs=rhs,
                     sparsity="bta",
                 )
@@ -965,8 +1008,8 @@ class DALIA:
         eta = self.model.a @ self.model.x
 
         self.model.construct_Q_conditional(eta)
-        self.solver.cholesky(self.model.Q_conditional, sparsity="bta")
-        self.solver.selected_inversion(sparsity="bta")
+        self.solverQc.cholesky(self.model.Q_conditional, sparsity="bta")
+        self.solverQc.selected_inversion(sparsity="bta")
 
     def get_marginal_variances_latent_parameters(
         self, theta: NDArray = None, x_star: NDArray = None
@@ -987,7 +1030,7 @@ class DALIA:
         self._compute_covariance_latent_parameters(theta, x_star)
 
         # now only extract diagonal elements corresponding to marginal variances of the latent parameters
-        marginal_variances_sp = self.solver._structured_to_spmatrix(
+        marginal_variances_sp = self.solverQc._structured_to_spmatrix(
             sp.sparse.eye(self.model.n_latent_parameters, dtype=xp.float64),
             sparsity="bta",
         )
@@ -1035,7 +1078,7 @@ class DALIA:
             self._compute_covariance_latent_parameters(theta, x_star)
 
             # now only extract diagonal elements corresponding to marginal variances of the latent parameters
-            variances_latent = self.solver._structured_to_spmatrix(
+            variances_latent = self.solverQc._structured_to_spmatrix(
                 self.model.Q_conditional,
                 sparsity="bta",
             )
@@ -1088,13 +1131,13 @@ class DALIA:
             eta[:] = self.model.a @ x_star
 
             Q_conditional = self.model.construct_Q_conditional(eta)
-            self.solver.cholesky(A=Q_conditional)
+            self.solverQc.cholesky(A=Q_conditional)
 
             rhs: NDArray = self.model.construct_information_vector(
                 eta,
                 x_star,
             )
-            x_update[:] = self.solver.solve(
+            x_update[:] = self.solverQc.solve(
                 rhs=rhs,
                 sparsity="bta",
             )
@@ -1130,8 +1173,8 @@ class DALIA:
         Log normal:
         .. math:: 0.5*log(1/(2*pi)^n * |Q_prior|)) - 0.5 * x.T Q_prior x
         """
-        self.solver.cholesky(self.model.Q_prior, sparsity="bt")
-        logdet_Q_prior: float = self.solver.logdet(sparsity="bt")
+        self.solverQp.cholesky(self.model.Q_prior, sparsity="bt")
+        logdet_Q_prior: float = self.solverQp.logdet(sparsity="bt")
 
         log_prior_latent_parameters: float = +0.5 * logdet_Q_prior
 
@@ -1171,7 +1214,7 @@ class DALIA:
         log normal: 0.5*log(1/(2*pi)^n * |Q_conditional|)) - 0.5 * (x - x_mean).T @ Q_conditional @ (x - x_mean)
         """
         # Compute the log determinant of Q_conditional
-        logdet_Q_conditional = self.solver.logdet(sparsity="bta")
+        logdet_Q_conditional = self.solverQc.logdet(sparsity="bta")
 
         if x is None and x_mean is None:
             quadratic_form = 0.0
