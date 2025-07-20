@@ -1,6 +1,7 @@
 # Copyright 2024-2025 DALIA authors. All rights reserved.
 
 import warnings
+
 from dalia import NDArray, sp, xp
 from dalia.configs.dalia_config import SolverConfig
 from dalia.core.solver import Solver
@@ -9,6 +10,7 @@ from dalia.core.solver import Solver
 PARDISO_AVAILABLE = False
 try:
     from pardisopy import PardisoSolver
+
     PARDISO_AVAILABLE = True
 except ImportError as e:
     warnings.warn(f"The pardisopy package is required to use the PardisoSolver: {e}")
@@ -76,6 +78,11 @@ class SparsePardisoSolver(Solver):
         # Placeholder for the selected inversion method.
         return super().selected_inversion(**kwargs)
 
+    def _structured_to_spmatrix(self, **kwargs) -> None:
+        """Convert structured matrix to sparse matrix."""
+
+        print("In _structured_to_spmatrix. Nothing to be done here.")
+
     def get_solver_memory(self) -> int:
         """Return the memory used by the solver in number of bytes"""
         if self.L is None:
@@ -88,14 +95,16 @@ class SparsePardisoSolver(Solver):
 
 
 if __name__ == "__main__":
-    from dalia.configs.dalia_config import SolverConfig
     import numpy as np
+
+    from dalia.configs.dalia_config import SolverConfig
 
     # Example usage
     config = SolverConfig()
     solver = SparsePardisoSolver(config)
     print("SparsePardisoSolver initialized successfully.")
 
+    n = 5
     a = np.array([4.0, 1.0, 4.0, 1.0, 4.0, 1.0, 4.0, 1.0, 4.5], dtype=np.float64)
     ia = np.array([1, 3, 5, 7, 9, 10], dtype=np.int32)  # Row pointers (1-based)
     ja = np.array(
@@ -104,8 +113,31 @@ if __name__ == "__main__":
 
     print("-------- Reference calculation ----------")
     # construct matrix to check
-    A_lower = sp.csr_matrix(
-        (a, ja - 1, ia - 1), shape=(n[0], n[0])
+    A_upper = sp.sparse.csr_matrix(
+        (a, ja - 1, ia - 1), shape=(n, n)
     )  # Convert to 0-based indexing for scipy
     print("Test matrix A (lower triangular part):")
-    print(A_lower.toarray())
+    print(A_upper.toarray())
+
+    A = A_upper + A_upper.T - sp.sparse.diags(A_upper.diagonal())
+
+    # Create a right-hand side vector
+    rhs = np.array([1.0, 2.0, 3.0, 4.0, 5.0], dtype=np.float64)
+
+    # Reference solution
+    L = sp.linalg.cholesky(A_upper.toarray(), lower=False)
+    logdet_ref = 2 * np.sum(np.log(L.diagonal()))
+    solution_ref = sp.linalg.solve(A.toarray(), rhs)
+
+    # Perform Cholesky decomposition
+    solver.cholesky(A_upper, compute_determinant=True)
+
+    # Solve the linear system
+    solution = solver.solve(rhs)
+    print("Solution to the linear system:", solution)
+    print("Reference solution:", solution_ref)
+
+    # Compute log determinant
+    logdet = solver.logdet()
+    print("Log determinant of the matrix:", logdet)
+    print("Reference log determinant:", logdet_ref)
