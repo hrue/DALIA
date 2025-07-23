@@ -9,7 +9,7 @@ Q_p([h, \alpha_1, ..., \alpha_d]) = h^2 \ \Phi(\alpha)
 $$
 while $y \sim N(0, 1-h^2 I)$. 
 Thus, while fitting the LGM framework, it doesn't cohere with the usual R-INLA setup.
-
+More details can be found in `generate_data.py` where the dataset (and thus the model) is generated. 
 
 ## Scripts
 
