@@ -1,31 +1,31 @@
 # Copyright 2024-2025 DALIA authors. All rights reserved.
 
 import logging
-from tabulate import tabulate
 
 from scipy import optimize
+from tabulate import tabulate
 
-from dalia import ArrayLike, NDArray, backend_flags, comm_rank, comm_size, xp, sp
+from dalia import ArrayLike, NDArray, backend_flags, comm_rank, comm_size, sp, xp
 from dalia.configs.dalia_config import DaliaConfig
 from dalia.core.model import Model
 from dalia.solvers import DenseSolver, DistSerinvSolver, SerinvSolver, SparseSolver
 from dalia.utils import (
+    DummyCommunicator,
+    add_str_header,
     allreduce,
+    ascii_logo,
+    boxify,
     extract_diagonal,
+    format_size,
     free_unused_gpu_memory,
     get_device,
     get_host,
+    memory_report,
     print_msg,
     set_device,
     smartsplit,
     synchronize,
     synchronize_gpu,
-    ascii_logo,
-    add_str_header,
-    boxify,
-    memory_report,
-    format_size,
-    DummyCommunicator,
 )
 
 if backend_flags["mpi_avail"]:
@@ -97,7 +97,7 @@ class DALIA:
                 min_group_size=min_solver_size * min_q_parallel,
             )
             self.world_size = self.comm_world.size
-            
+
             self.qeval_world, self.comm_qeval, self.color_qeval = smartsplit(
                 comm=self.comm_feval,
                 n_parallelizable_evaluations=self.n_qeval,
@@ -160,7 +160,7 @@ class DALIA:
                     raise ValueError(
                         f"Not enough diagonal blocks ({n_diag_blocks}) to use the distributed solver with {n_processes_solver} processes."
                     )
-                
+
                 self.nccl_comm = None
                 if backend_flags["nccl_avail"]:
                     # --- Initialize NCCL communicator
@@ -209,13 +209,13 @@ class DALIA:
         self.objective_function_time: ArrayLike = []
         self.solver_time: ArrayLike = []
         self.construction_time: ArrayLike = []
-        
+
         # --- Timers
         self.t_construction_qprior = 0.0
         self.t_construction_qconditional = 0.0
         self.solver.t_cholesky = 0.0
         self.solver.t_solve = 0.0
-        
+
         self._print_init()
 
         logging.info("DALIA initialized.")
@@ -232,9 +232,18 @@ class DALIA:
 
         # Parallelization strategies header
         parallel_strategies_values = [
-            ["Participating Processes / Total Processes", f"{self.world_size} / {self.initial_comm_world.size}"], 
-            ["Parallelization through F()", f"{self.world_size // self.comm_feval.size}"],
-            ["Parallelization through Q()", f"{self.comm_feval.size // self.comm_qeval.size}"],
+            [
+                "Participating Processes / Total Processes",
+                f"{self.world_size} / {self.initial_comm_world.size}",
+            ],
+            [
+                "Parallelization through F()",
+                f"{self.world_size // self.comm_feval.size}",
+            ],
+            [
+                "Parallelization through Q()",
+                f"{self.comm_feval.size // self.comm_qeval.size}",
+            ],
             ["Parallelization through S()", f"{self.comm_qeval.size}"],
         ]
         parallel_strategies_table = tabulate(
@@ -250,10 +259,10 @@ class DALIA:
 
         # HPC modules header
         hpc_modules_values = [
-            ["Array module", xp.__name__], 
-            ["MPI available", backend_flags["mpi_avail"]], 
-            ["Is MPI CUDA aware", backend_flags["mpi_cuda_aware"]], 
-            ["Is NCCL available", backend_flags["nccl_avail"]], 
+            ["Array module", xp.__name__],
+            ["MPI available", backend_flags["mpi_avail"]],
+            ["Is MPI CUDA aware", backend_flags["mpi_cuda_aware"]],
+            ["Is NCCL available", backend_flags["nccl_avail"]],
         ]
         hpc_modules_table = tabulate(
             hpc_modules_values,
@@ -269,9 +278,9 @@ class DALIA:
         # Memory usage header
         used_memory, available_memory = memory_report()
         memory_usage_values = [
-            ["Solver memory", format_size(self.solver.get_solver_memory())], 
-            ["Total memory used", format_size(used_memory)], 
-            ["Total memory available", format_size(available_memory)], 
+            ["Solver memory", format_size(self.solver.get_solver_memory())],
+            ["Total memory used", format_size(used_memory)],
+            ["Total memory available", format_size(available_memory)],
         ]
         memory_usage_table = tabulate(
             memory_usage_values,
@@ -285,8 +294,6 @@ class DALIA:
         str_representation += "\n" + boxify(memory_usage_table)
 
         print_msg(str_representation, flush=True)
-        
-
 
     def run(self) -> dict:
         """Run the DALIA"""
@@ -314,6 +321,7 @@ class DALIA:
         # construct new dictionary with the results
         results = {
             "theta": minimization_result["theta"],
+            "theta_interpret": minimization_result["theta_interpret"],
             "x": minimization_result["x"],
             "f": minimization_result["f"],
             "grad_f": minimization_result["grad_f"],
@@ -345,12 +353,13 @@ class DALIA:
             # Only run the inner iteration
             print_msg("No hyperparameters, just running inner iteration.")
             self.f_value = self._evaluate_f(self.model.theta)
-
             self.minimization_result: dict = {
                 "theta": self.model.theta,
+                "theta_interpret": self.model.get_theta_interpret(),
                 "x": self.model.x,  # [self.model.inverse_permutation_latent_variables],
                 "f": self.f_value,
             }
+
         else:
             print_msg("Starting optimization.")
             self.iter = 0
@@ -401,6 +410,9 @@ class DALIA:
 
                         self.minimization_result = {
                             "theta": get_host(self.model.theta),
+                            "theta_interpret": get_host(
+                                self.model.get_theta_interpret()
+                            ),
                             "x": get_host(
                                 self.model.x
                                 # self.model.x[
@@ -439,6 +451,9 @@ class DALIA:
 
                         self.minimization_result = {
                             "theta": get_host(self.model.theta),
+                            "theta_interpret": get_host(
+                                self.model.get_theta_interpret()
+                            ),
                             "x": get_host(
                                 self.model.x
                                 # self.model.x[
@@ -499,6 +514,7 @@ class DALIA:
 
             self.minimization_result: dict = {
                 "theta": scipy_result.x,
+                "theta_interpret": self.model.get_theta_interpret(),
                 "x": get_host(
                     self.model.x,  # [self.model.inverse_permutation_latent_variables]
                 ),
@@ -624,6 +640,10 @@ class DALIA:
         hyperparameters, log likelihood, log prior of the latent parameters,
         and log conditional of the latent parameters.
         """
+        import time
+
+        tic = time.time()
+
         self.model.theta[:] = theta_i
         f_theta = xp.zeros(1, dtype=xp.float64)
 
@@ -758,8 +778,16 @@ class DALIA:
             Covariance matrix of the hyperparameters theta.
         """
         self.model.theta[:] = theta_i
+        print_msg(
+            f"Computing covariance of hyperparameters theta at {theta_i}.",
+            flush=True,
+        )
 
         hess_theta = self._evaluate_hessian_f(theta_i)
+        # print_msg(
+        #     f"hessian_f: \n {hess_theta}",
+        #     flush=True,
+        # )
         cov_theta = xp.linalg.inv(hess_theta)
 
         return cov_theta
@@ -784,6 +812,8 @@ class DALIA:
         Compute finite difference approximation of the hessian of f at theta_i.
         """
 
+        ## TODO: this is the quick fix ...
+        theta_internal = theta_i.copy()
         self.model.theta[:] = theta_i
         dim_theta = self.model.n_hyperparameters
 
@@ -828,22 +858,22 @@ class DALIA:
             if i == j:
                 if self.color_feval == task_mapping[counter]:
                     # theta+eps_i
-                    f_ii_loc[0, i] = self._evaluate_f(
-                        theta_i + eps_mat[i, :]
-                    )
+                    theta_i = theta_internal.copy()
+                    f_ii_loc[0, i] = self._evaluate_f(theta_i + eps_mat[i, :])
                 counter += 1
 
                 if self.color_feval == task_mapping[counter]:
                     # theta-eps_i
-                    f_ii_loc[2, i] = self._evaluate_f(
-                        theta_i - eps_mat[i, :]
-                    )
+                    theta_i = theta_internal.copy()
+                    f_ii_loc[2, i] = self._evaluate_f(theta_i - eps_mat[i, :])
+
                 counter += 1
 
             # as hessian is symmetric we only have to compute the upper triangle
             elif i < j:
                 # theta+eps_i+eps_j
                 if self.color_feval == task_mapping[counter]:
+                    theta_i = theta_internal.copy()
                     f_ij_loc[0, k] = self._evaluate_f(
                         theta_i + eps_mat[i, :] + eps_mat[j, :]
                     )
@@ -851,6 +881,7 @@ class DALIA:
 
                 # theta+eps_i-eps_j
                 if self.color_feval == task_mapping[counter]:
+                    theta_i = theta_internal.copy()
                     f_ij_loc[1, k] = self._evaluate_f(
                         theta_i + eps_mat[i, :] - eps_mat[j, :]
                     )
@@ -858,6 +889,7 @@ class DALIA:
 
                 # theta-eps_i+eps_j
                 if self.color_feval == task_mapping[counter]:
+                    theta_i = theta_internal.copy()
                     f_ij_loc[2, k] = self._evaluate_f(
                         theta_i - eps_mat[i, :] + eps_mat[j, :]
                     )
@@ -865,6 +897,7 @@ class DALIA:
 
                 # theta-eps_i-eps_j
                 if self.color_feval == task_mapping[counter]:
+                    theta_i = theta_internal.copy()
                     f_ij_loc[3, k] = self._evaluate_f(
                         theta_i - eps_mat[i, :] - eps_mat[j, :]
                     )
@@ -930,7 +963,7 @@ class DALIA:
         self.model.x[:] = x_star
 
         eta = self.model.a @ self.model.x
-        
+
         self.model.construct_Q_conditional(eta)
         self.solver.cholesky(self.model.Q_conditional, sparsity="bta")
         self.solver.selected_inversion(sparsity="bta")
@@ -949,7 +982,7 @@ class DALIA:
             raise ValueError(
                 "BOTH or NEITHER theta and x_star must be provided to compute the marginal variances."
             )
-            
+
         # check order x_star ... -> potentially need to reorder marginal variances
         self._compute_covariance_latent_parameters(theta, x_star)
 
@@ -1146,7 +1179,7 @@ class DALIA:
         # the else fails if x_mean is None
         else:
             # Symmetrizing (averaging the tip of the arrow to tame down numerical innaccuracies)
-            tip_accu = x_mean[-self.model.total_number_fixed_effects():].copy()
+            tip_accu = x_mean[-self.model.total_number_fixed_effects() :].copy()
             synchronize(comm=self.comm_qeval)
             allreduce(
                 tip_accu,
@@ -1155,7 +1188,7 @@ class DALIA:
                 comm=self.comm_qeval,
             )
             synchronize(comm=self.comm_qeval)
-            x_mean[-self.model.total_number_fixed_effects():] = tip_accu
+            x_mean[-self.model.total_number_fixed_effects() :] = tip_accu
 
             if x is None and x_mean is not None:
                 quadratic_form = x_mean.T @ Q_conditional @ x_mean

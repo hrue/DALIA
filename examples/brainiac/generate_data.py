@@ -94,10 +94,14 @@ if __name__ == "__main__":
     # information_vector = -1 * Qprior @ beta + a_sp.T @ grad_y
 
     beta_initial = np.zeros((b, 1))
-    grad_y = - 1 / (1 - h2) * (-y)
-    information_vector = a_sp.T @ grad_y   
+    grad_y = -1 / (1 - h2) * (-y)
+    information_vector = a_sp.T @ grad_y
 
-    beta_recovered = beta_initial + np.linalg.solve(Qconditional.toarray(), information_vector)
+    beta_recovered = beta_initial + np.linalg.solve(
+        Qconditional.toarray(), information_vector
+    )
     print("beta recovered: ", beta_recovered.flatten())
     print("beta original : ", beta.flatten())
     print("norm(diff) : ", np.linalg.norm(beta_recovered - beta))
+
+
