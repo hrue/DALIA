@@ -26,6 +26,7 @@ from dalia.utils import (
     smartsplit,
     synchronize,
     synchronize_gpu,
+    check_vector_consistency
 )
 
 if backend_flags["mpi_avail"]:
@@ -304,8 +305,16 @@ class DALIA:
         theta_star = get_device(minimization_result["theta"])
         x_star = get_device(minimization_result["x"])
 
+        # need to update theta_star and x_star to be the same across all ranks
+        theta_star[:] = self.comm_world.bcast(theta_star, root=0)
+        x_star[:] = self.comm_world.bcast(x_star, root=0)
+
         # compute covariance of the hyperparameters theta at the mode
         cov_theta = self.compute_covariance_hp(theta_star)
+
+        # need to update theta_star and x_star to be the same across all ranks
+        theta_star[:] = self.comm_world.bcast(theta_star, root=0)
+        x_star[:] = self.comm_world.bcast(x_star, root=0)
 
         # compute marginal variances of the latent parameters
         marginal_variances_latent = self.get_marginal_variances_latent_parameters(
@@ -348,6 +357,12 @@ class DALIA:
         minimization_result : scipy.optimize.OptimizeResult
             Result of the optimization procedure.
         """
+
+        # ensure that all ranks are initialized to the same theta
+        check_vector_consistency(
+            self.model.theta,
+            comm=self.comm_world,
+        )
 
         if len(self.model.theta) == 0:
             # Only run the inner iteration
@@ -777,6 +792,13 @@ class DALIA:
         cov_theta : NDArray[dim_theta, dim_theta]
             Covariance matrix of the hyperparameters theta.
         """
+
+        # ensure that all ranks are initialized to the same theta
+        check_vector_consistency(
+            theta_i,
+            comm=self.comm_world,
+        )
+
         self.model.theta[:] = theta_i
         print_msg(
             f"Computing covariance of hyperparameters theta at {theta_i}.",
@@ -982,6 +1004,9 @@ class DALIA:
             raise ValueError(
                 "BOTH or NEITHER theta and x_star must be provided to compute the marginal variances."
             )
+        
+        check_vector_consistency(theta, comm=self.comm_world)
+        check_vector_consistency(x_star, comm=self.comm_world)
 
         # check order x_star ... -> potentially need to reorder marginal variances
         self._compute_covariance_latent_parameters(theta, x_star)
@@ -1017,6 +1042,9 @@ class DALIA:
         marginal_variances_observations : NDArray
             Marginal variances of the observations.
         """
+
+        check_vector_consistency(theta, comm=self.comm_world)
+        check_vector_consistency(x_star, comm=self.comm_world)
 
         if self.model.is_likelihood_gaussian():
             # TODO: this should be only called by rank 0?
