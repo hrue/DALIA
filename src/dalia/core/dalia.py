@@ -8,7 +8,7 @@ from tabulate import tabulate
 from dalia import ArrayLike, NDArray, backend_flags, comm_rank, comm_size, sp, xp
 from dalia.configs.dalia_config import DaliaConfig
 from dalia.core.model import Model
-from dalia.solvers import DenseSolver, DistSerinvSolver, SerinvSolver, SparseSolver, SparsePardisoSolver
+from dalia.solvers import DenseSolver, DistSerinvSolver, SerinvSolver, SparseSolver, SparsePardisoSolver, SparseMumpsSolver
 from dalia.utils import (
     DummyCommunicator,
     add_str_header,
@@ -144,6 +144,17 @@ class DALIA:
             )
             self.solverQc = SparsePardisoSolver(
                 config=self.config.solver,
+            )
+
+        elif self.config.solver.type == "mumps":
+            # initialize two separate solvers to reuse symbolic factorization of each
+            self.solverQp = SparseMumpsSolver(
+                config=self.config.solver,
+                comm=self.comm_qeval,
+            )
+            self.solverQc = SparseMumpsSolver(
+                config=self.config.solver,
+                comm=self.comm_qeval,
             )
             
         elif self.config.solver.type == "serinv":

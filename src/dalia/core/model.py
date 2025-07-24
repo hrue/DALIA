@@ -433,6 +433,9 @@ class Model(ABC):
             # General rules
             d_matrix = self.likelihood.evaluate_hessian_likelihood(**kwargs)
 
+        if self.Q_prior is None:
+            self.Q_prior = self.construct_Q_prior()
+
         # if self.a is sparse -> Q_conditional should be sparse, else dense
         if sp.sparse.issparse(self.a):
             if self.aTa is not None:
