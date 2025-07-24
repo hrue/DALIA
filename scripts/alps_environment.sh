@@ -80,6 +80,8 @@ load_alps_modules() {
     export LIBRARY_PATH=$CUDA_HOME/lib64:$LIBRARY_PATH
     export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
     export CPATH=$NCCL_ROOT/include:$CPATH
+    export CFLAGS="-I$NCCL_ROOT/include $CFLAGS"
+    export LDFLAGS="-L$NCCL_ROOT/lib $LDFLAGS"
     export LIBRARY_PATH=$NCCL_ROOT/lib:$LIBRARY_PATH
     export LD_LIBRARY_PATH=$NCCL_ROOT/lib:$LD_LIBRARY_PATH
     

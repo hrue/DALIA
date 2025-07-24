@@ -89,6 +89,7 @@ try:
         backend_flags["mpi_cuda_aware"] = True
     if backend_flags["cupy_avail"] and os.environ.get("USE_NCCL", "0") == "1":
         backend_flags["nccl_avail"] = True
+        from cupy.cuda import nccl # Required because of lazy import
     else:
         backend_flags["nccl_avail"] = False
 
