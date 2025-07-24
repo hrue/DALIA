@@ -71,6 +71,7 @@ if __name__ == "__main__":
     dalia_dict = {
         "solver": {"type": "serinv"},
         #"solver": {"type": "pardiso"},
+        #"solver": {"type": "mumps"},
         "minimize": {
             "max_iter": args.max_iter,
             "gtol": 1e-3,
