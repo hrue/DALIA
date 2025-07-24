@@ -24,6 +24,11 @@ class CommunicatorConfig(BaseModel):
     allgatherv: Literal["default", "host_mpi", "device_mpi", "nccl", "none"] = "default"
     alltoall: Literal["default", "host_mpi", "device_mpi", "nccl", "none"] = "default"
     bcast: Literal["default", "host_mpi", "device_mpi", "nccl", "none"] = "default"
+    reduce: Literal["default", "host_mpi", "device_mpi", "nccl", "none"] = "default"
+    reduce_scatter: Literal["default", "host_mpi", "device_mpi", "nccl", "none"] = (
+        "default"
+    )
+    send_recv: Literal["default", "host_mpi", "device_mpi", "nccl", "none"] = "default"
 
 
 class FCommunicatorConfig(CommunicatorConfig):

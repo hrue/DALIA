@@ -54,6 +54,9 @@ class CollectiveConfig:
     allgatherv: str = "default"
     alltoall: str = "default"
     bcast: str = "default"
+    reduce: str = "default"
+    reduce_scatter: str = "default"
+    send_recv: str = "default"
 
 
 class Communicator:
@@ -165,7 +168,16 @@ class Communicator:
     def _resolve_and_validate_collective_config(self, config: CommunicatorConfig):
         """Resolve 'default' collective comm libs to the best available option and validate availability."""
         collective_config: CollectiveConfig = CollectiveConfig()
-        for key in ["allreduce", "allgather", "allgatherv", "alltoall", "bcast"]:
+        for key in [
+            "allreduce",
+            "allgather",
+            "allgatherv",
+            "alltoall",
+            "bcast",
+            "reduce",
+            "reduce_scatter",
+            "send_recv",
+        ]:
             lib = config.__dict__.get(key, "default")
             if lib == "default":
                 # Use the general comm_lib for default collectives
@@ -215,6 +227,8 @@ class Communicator:
                 op=nccl_op[op],
                 stream=cp.cuda.Stream.null.ptr,
             )
+        elif self.collective_config.allreduce == "none":
+            pass
 
         self.barrier()
 
@@ -250,6 +264,8 @@ class Communicator:
                 datatype=datatype,
                 stream=cp.cuda.Stream.null.ptr,
             )
+        elif self.collective_config.allgather == "none":
+            pass
 
         self.barrier()
 
@@ -258,6 +274,51 @@ class Communicator:
 
     def alltoall(self):
         raise NotImplementedError("alltoall method not yet implemented")
+
+    def reduce(self, arr, op, root: int = 0):
+        def _get_reduce_parameters(arr):
+            factor = self._get_dtype_factor(arr)
+            count = arr.size * factor
+            return count
+
+        count = _get_reduce_parameters(arr)
+
+        self.barrier()
+
+        if self.collective_config.reduce == "host_mpi":
+            comm_arr = arr if arr.__module__ == "numpy" else arr.get()
+            self.base_comm.Reduce(
+                sendbuf=MPI.IN_PLACE,
+                recvbuf=comm_arr,
+                op=mpi_op[op],
+                root=root,
+            )
+            arr = comm_arr if arr.__module__ == "numpy" else cp.asarray(arr)
+        elif self.collective_config.reduce == "device_mpi":
+            self.base_comm.Reduce(
+                sendbuf=MPI.IN_PLACE,
+                recvbuf=arr,
+                op=mpi_op[op],
+                root=root,
+            )
+        elif self.collective_config.reduce == "nccl":
+            datatype = nccl_datatype[arr.dtype.type]
+            self._xccl_comm.reduce(
+                sendbuf=arr.data.ptr,
+                recvbuf=arr.data.ptr,
+                count=count,
+                datatype=datatype,
+                op=nccl_op[op],
+                root=root,
+                stream=cp.cuda.Stream.null.ptr,
+            )
+        elif self.collective_config.reduce == "none":
+            pass
+
+        self.barrier()
+
+    def reduce_scatter(self):
+        raise NotImplementedError("reduce_scatter method not yet implemented")
 
     def bcast(self, arr, root: int = 0):
         def _get_bcast_parameters(arr):
@@ -290,12 +351,91 @@ class Communicator:
                 root=root,
                 stream=cp.cuda.Stream.null.ptr,
             )
+        elif self.collective_config.allgather == "none":
+            pass
+
+        self.barrier()
+
+    def send(self, arr, dest, tag):
+        def _get_send_parameters(arr):
+            factor = self._get_dtype_factor(arr)
+            count = arr.size * factor
+            return count
+
+        count = _get_send_parameters(arr)
+
+        self.barrier()
+
+        if self.collective_config.send_recv == "host_mpi":
+            comm_arr = arr if arr.__module__ == "numpy" else arr.get()
+            self.base_comm.Send(
+                buf=comm_arr,
+                dest=dest,
+                tag=tag,
+            )
+            arr = comm_arr if arr.__module__ == "numpy" else cp.asarray(arr)
+        elif self.collective_config.send_recv == "device_mpi":
+            self.base_comm.Send(
+                buf=arr,
+                dest=dest,
+                tag=tag,
+            )
+        elif self.collective_config.send_recv == "nccl":
+            datatype = nccl_datatype[arr.dtype.type]
+            self._xccl_comm.send(
+                sendbuf=arr.data.ptr,
+                count=count,
+                datatype=datatype,
+                peer=dest,
+                stream=cp.cuda.Stream.null.ptr,
+            )
+        elif self.collective_config.send_recv == "none":
+            pass
+
+        self.barrier()
+
+    def recv(self, arr, source, tag):
+        def _get_recv_parameters(arr):
+            factor = self._get_dtype_factor(arr)
+            count = arr.size * factor
+            return count
+
+        count = _get_recv_parameters(arr)
+
+        self.barrier()
+
+        if self.collective_config.send_recv == "host_mpi":
+            comm_arr = arr if arr.__module__ == "numpy" else arr.get()
+            self.base_comm.Recv(
+                buf=comm_arr,
+                source=source,
+                tag=tag,
+            )
+            arr = comm_arr if arr.__module__ == "numpy" else cp.asarray(arr)
+        elif self.collective_config.send_recv == "device_mpi":
+            self.base_comm.Recv(
+                buf=arr,
+                source=source,
+                tag=tag,
+            )
+        elif self.collective_config.send_recv == "nccl":
+            datatype = nccl_datatype[arr.dtype.type]
+            self._xccl_comm.recv(
+                recvbuf=arr.data.ptr,
+                count=count,
+                datatype=datatype,
+                peer=source,
+                stream=cp.cuda.Stream.null.ptr,
+            )
+        elif self.collective_config.send_recv == "none":
+            pass
 
         self.barrier()
 
     # Utilities
     def barrier(self, sync_gpu: bool = True):
-        self.base_comm.Barrier()
+        if self.base_comm is not None:
+            self.base_comm.Barrier()
         if sync_gpu and backend_flags["cupy_avail"]:
             cp.cuda.Stream.null.synchronize()
 
