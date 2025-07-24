@@ -12,13 +12,24 @@ set_alps_perfconfig() {
     export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
     export CUDA_VISIBLE_DEVICES=$SLURM_LOCALID
     export MPICH_GPU_SUPPORT_ENABLED=1
+
+    # NCCL Performance Configuration
+    # More can be found: https://docs.cscs.ch/software/communication/nccl/#using-nccl
     export NCCL_NET='AWS Libfabric'
+    export NCCL_NET_GDR_LEVEL=PHB
+    export NCCL_CROSS_NIC=1
+
+    export FI_CXI_DEFAULT_CQ_SIZE=131072
+    export FI_CXI_DEFAULT_TX_SIZE=32768
+    export FI_CXI_DISABLE_HOST_REGISTER=1
+    export FI_CXI_RX_MATCH_MODE=software
+    export FI_MR_CACHE_MONITOR=userfaultfd
 }
 
 set_dalia_perfenv() {
     echo "🔧 Setting up DALIA performance environment..."
     
-    # If we ar ein a SLURM job, call set_alps_perfconfig
+    # If we are in a SLURM job, call set_alps_perfconfig
     if [ -n "${SLURM_JOB_ID:-}" ]; then
         set_alps_perfconfig
     else
@@ -27,8 +38,8 @@ set_dalia_perfenv() {
 
     # Set DALIA environment variables
     export ARRAY_MODULE=cupy
-    export MPI_CUDA_AWARE=0
-    export USE_NCCL=0
+    export MPI_CUDA_AWARE=1
+    export USE_NCCL=1
     export MPICH_GPU_SUPPORT_ENABLED=0
 }
 

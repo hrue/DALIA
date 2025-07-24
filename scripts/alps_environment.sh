@@ -144,8 +144,6 @@ setup_dalia_alps_environment() {
     
     return 0
 }
-    
-    return 0
-}
+
 
 
