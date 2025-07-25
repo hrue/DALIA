@@ -10,7 +10,11 @@ from pydantic import BaseModel, ConfigDict, PositiveInt
 class SolverConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+<<<<<<< HEAD
     type: Literal["dense", "scipy", "serinv", "pardiso"] = "scipy"
+=======
+    type: Literal["dense", "scipy", "serinv", "pardiso", "mumps"] = "scipy"
+>>>>>>> 953d3bcb4615d92f863eefae6cfa693669751b2a
 
     min_processes: PositiveInt = 1
 

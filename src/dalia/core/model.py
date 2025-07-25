@@ -3,9 +3,9 @@
 import os
 from abc import ABC
 from pathlib import Path
-from tabulate import tabulate
 
 import numpy as np
+from tabulate import tabulate
 
 from dalia import ArrayLike, NDArray, sp, xp
 from dalia.configs.likelihood_config import LikelihoodConfig
@@ -31,7 +31,7 @@ from dalia.submodels import (
     SpatialSubModel,
     SpatioTemporalSubModel,
 )
-from dalia.utils import scaled_logit, add_str_header, boxify
+from dalia.utils import add_str_header, boxify, scaled_logit
 
 
 class Model(ABC):
@@ -209,32 +209,54 @@ class Model(ABC):
 
         self.x: NDArray = xp.zeros(self.n_latent_parameters)
 
-        data = []
-        rows = []
-        cols = []
-        for i, submodel in enumerate(self.submodels):
-            # Convert csc_matrix to coo_matrix to allow slicing
-            coo_submodel_a = submodel.a.tocoo()
-            data.append(coo_submodel_a.data)
-            rows.append(coo_submodel_a.row)
-            cols.append(
-                coo_submodel_a.col
-                + self.latent_parameters_idx[i]
-                * xp.ones(coo_submodel_a.col.size, dtype=int)
+        # check if all a are sparse -> if not construct dense a
+        if all(sp.sparse.issparse(submodel.a) for submodel in self.submodels):
+            data = []
+            rows = []
+            cols = []
+            for i, submodel in enumerate(self.submodels):
+                # Convert csc_matrix to coo_matrix to allow slicing
+                coo_submodel_a = submodel.a.tocoo()
+                data.append(coo_submodel_a.data)
+                rows.append(coo_submodel_a.row)
+                cols.append(
+                    coo_submodel_a.col
+                    + self.latent_parameters_idx[i]
+                    * xp.ones(coo_submodel_a.col.size, dtype=int)
+                )
+
+                self.x[
+                    self.latent_parameters_idx[i] : self.latent_parameters_idx[i + 1]
+                ] = submodel.x_initial
+
+            self.a: sp.sparse.spmatrix = sp.sparse.coo_matrix(
+                (xp.concatenate(data), (xp.concatenate(rows), xp.concatenate(cols))),
+                shape=(submodel.a.shape[0], self.n_latent_parameters),
             )
+        else:
+            data = []
+            for i, submodel in enumerate(self.submodels):
+                if sp.sparse.issparse(submodel.a):
+                    data.append(submodel.a.toarray())
+                else:
+                    data.append(submodel.a)
 
-            self.x[
-                self.latent_parameters_idx[i] : self.latent_parameters_idx[i + 1]
-            ] = submodel.x_initial
+                self.x[
+                    self.latent_parameters_idx[i] : self.latent_parameters_idx[i + 1]
+                ] = submodel.x_initial
 
-        self.a: sp.sparse.spmatrix = sp.sparse.coo_matrix(
-            (xp.concatenate(data), (xp.concatenate(rows), xp.concatenate(cols))),
-            shape=(submodel.a.shape[0], self.n_latent_parameters),
+            self.a: NDArray = xp.concatenate(data, axis=1)
+
+        self.permutation_latent_variables = xp.arange(0, self.n_latent_parameters, 1)
+        self.inverse_permutation_latent_variables = xp.arange(
+            0, self.n_latent_parameters, 1
         )
 
-        # TODO: not so efficient ...
-        self.permutation_latent_variables = xp.arange(self.n_latent_parameters)
-        self.inverse_permutation_latent_variables = xp.arange(self.n_latent_parameters)
+        # if data is gaussian compute t(A)*A once
+        if likelihood_config.type == "gaussian":
+            self.aTa = self.a.T @ self.a
+        else:
+            self.aTa = None
 
         # --- Load observation vector
         input_dir = Path(
@@ -252,7 +274,6 @@ class Model(ABC):
         self.n_observations: int = self.y.shape[0]
 
         # --- Initialize likelihood
-        # TODO: clean this -> so that for brainiac model we don't add additional hyperperameter
         if likelihood_config.type == "gaussian":
             self.likelihood: Likelihood = GaussianLikelihood(
                 n_observations=self.n_observations,
@@ -384,7 +405,7 @@ class Model(ABC):
     def construct_Q_conditional(
         self,
         eta: NDArray,
-    ) -> float:
+    ):
         """Construct the conditional precision matrix.
 
         Note
@@ -393,12 +414,6 @@ class Model(ABC):
         The negative hessian is required, therefore the minus in front.
 
         """
-
-        # TODO: need to vectorize
-        # hessian_likelihood_diag = hessian_diag_finite_difference_5pt(
-        #     self.likelihood.evaluate_likelihood, eta, self.y, theta_likelihood
-        # )
-        # hessian_likelihood = diags(hessian_likelihood_diag)
 
         if self.likelihood_config.type == "gaussian":
             kwargs = {
@@ -418,7 +433,26 @@ class Model(ABC):
             # General rules
             d_matrix = self.likelihood.evaluate_hessian_likelihood(**kwargs)
 
-        self.Q_conditional = self.Q_prior - self.a.T @ d_matrix @ self.a
+        if self.Q_prior is None:
+            self.Q_prior = self.construct_Q_prior()
+
+        # if self.a is sparse -> Q_conditional should be sparse, else dense
+        if sp.sparse.issparse(self.a):
+            if self.aTa is not None:
+                self.Q_conditional = self.Q_prior - d_matrix.diagonal()[0] * self.aTa
+            else:
+                self.Q_conditional = self.Q_prior - self.a.T @ d_matrix @ self.a
+            # self.Q_conditional = self.Q_prior - self.a.T @ d_matrix @ self.a
+        else:
+            if self.aTa is not None:
+                self.Q_conditional = (
+                    self.Q_prior.toarray() - d_matrix.diagonal()[0] * self.aTa
+                )
+            else:
+                self.Q_conditional = (
+                    self.Q_prior.toarray() - self.a.T @ d_matrix @ self.a
+                )
+            # self.Q_conditional = self.Q_prior.toarray() - self.a.T @ d_matrix @ self.a
 
         return self.Q_conditional
 
@@ -461,7 +495,6 @@ class Model(ABC):
             #
             theta_interpret = self.theta.copy()
             theta_interpret[0] = scaled_logit(self.theta[0], direction="backward")
-            # TODO: multivariate prior for a ... need to generalize for now:
             log_prior += self.prior_hyperparameters[0].evaluate_log_prior(
                 theta_interpret[0]
             )
@@ -487,6 +520,22 @@ class Model(ABC):
 
         return theta_likelihood
 
+    def get_theta_interpret(self) -> NDArray:
+        theta_interpret = xp.zeros_like(self.theta)
+
+        for i, submodel in enumerate(self.submodels):
+            # print("indices: ", self.hyperparameters_idx[i], self.hyperparameters_idx[i + 1])
+            # print("submodel theta in model: ", self.theta[self.hyperparameters_idx[i] : self.hyperparameters_idx[i + 1]])
+            theta_interpret[
+                self.hyperparameters_idx[i] : self.hyperparameters_idx[i + 1]
+            ] = submodel.rescale_hyperparameters_to_interpret(
+                self.theta[
+                    self.hyperparameters_idx[i] : self.hyperparameters_idx[i + 1]
+                ]
+            )
+
+        return theta_interpret
+
     def evaluate_likelihood(self, eta: NDArray, **kwargs) -> float:
         """Evaluate the likelihood."""
 
@@ -505,10 +554,24 @@ class Model(ABC):
         str_representation = ""
 
         # --- Make the Model() table ---
-        headers = ["Number of Hyperparameters", "Number of Latent Parameters", "Number of Observations", "Type of Likelihood"]
-        values = [self.n_hyperparameters, self.n_latent_parameters, self.n_observations, self.likelihood_config.type.capitalize()]
+        headers = [
+            "Number of Hyperparameters",
+            "Number of Latent Parameters",
+            "Number of Observations",
+            "Type of Likelihood",
+        ]
+        values = [
+            self.n_hyperparameters,
+            self.n_latent_parameters,
+            self.n_observations,
+            self.likelihood_config.type.capitalize(),
+        ]
 
-        model_table = tabulate([headers, values], tablefmt="fancy_grid", colalign=("center", "center", "center", "center"))
+        model_table = tabulate(
+            [headers, values],
+            tablefmt="fancy_grid",
+            colalign=("center", "center", "center", "center"),
+        )
 
         # Add the header title
         model_table = add_str_header("Default Model", model_table)
@@ -524,14 +587,16 @@ class Model(ABC):
 
         # Pad each list of lines to the same length
         for lines in lines_list:
-            lines += [''] * (max_len - len(lines))
+            lines += [""] * (max_len - len(lines))
 
         # Concatenate corresponding lines
-        result_lines = ['  '.join(parts) for parts in zip(*lines_list)]
-        submodel_jointed_representation = '\n'.join(result_lines)
+        result_lines = ["  ".join(parts) for parts in zip(*lines_list)]
+        submodel_jointed_representation = "\n".join(result_lines)
 
         # Add the submodel header title
-        submodel_jointed_representation = add_str_header("Submodels", submodel_jointed_representation)
+        submodel_jointed_representation = add_str_header(
+            "Submodels", submodel_jointed_representation
+        )
 
         # Combine the model and submodel tables
         str_representation = model_table + "\n" + submodel_jointed_representation
@@ -558,15 +623,14 @@ class Model(ABC):
         }
 
         return param
-    
-    
+
     def construct_a_predict(self) -> sp.sparse.spmatrix:
         """Construct the design matrix for prediction."""
-        
+
         data = []
         rows = []
         cols = []
-                
+
         rows_a_predict = 0
         for i, submodel in enumerate(self.submodels):
             # Convert csc_matrix to coo_matrix to allow slicing
@@ -578,10 +642,10 @@ class Model(ABC):
                 + self.latent_parameters_idx[i]
                 * xp.ones(coo_submodel_a_predict.col.size, dtype=int)
             )
-            
+
             # the number of rows in all of them is the same
             rows_a_predict = coo_submodel_a_predict.shape[0]
-                    
+
         self.a_predict: sp.sparse.spmatrix = sp.sparse.coo_matrix(
             (xp.concatenate(data), (xp.concatenate(rows), xp.concatenate(cols))),
             shape=(rows_a_predict, self.n_latent_parameters),

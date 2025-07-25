@@ -2,39 +2,50 @@
 
 import warnings
 
-from dalia import NDArray, sp, xp
+from dalia import NDArray, sp, xp, backend_flags
 from dalia.configs.dalia_config import SolverConfig
 from dalia.core.solver import Solver
 
-# Try to import pardisopy with proper error handling
-PARDISO_AVAILABLE = False
+
+if backend_flags["mpi_avail"]:
+    from mpi4py import MPI
+    from mpi4py.MPI import Comm as mpi_comm
+else:
+    mpi_comm = None
+
+# Try to import mumpspy with proper error handling
+MUMPS_AVAILABLE = False
 try:
-    from pardisopy import PardisoSolver
+    from mumpspy import MumpsSolver
 
-    PARDISO_AVAILABLE = True
+    MUMPS_AVAILABLE = True
 except ImportError as e:
-    warnings.warn(f"The pardisopy package is required to use the PardisoSolver: {e}")
-    PardisoSolver = None
+    warnings.warn(f"The mumpspy package is required to use the MumpsSolver: {e}")
+    MumpsSolver = None
 
 
-class SparsePardisoSolver(Solver):
+class SparseMumpsSolver(Solver):
     def __init__(
         self,
         config: SolverConfig,
+        comm: mpi_comm,
         **kwargs,
     ) -> None:
         """Initializes the solver."""
         super().__init__(config)
 
-        if not PARDISO_AVAILABLE:
+        if not MUMPS_AVAILABLE:
             raise ImportError(
-                "pardisopy is not available. Please install pardisopy and ensure "
-                "the libpardiso.dylib library is properly linked."
+                "mumpspy is not available. Please install mumpspy and ensure "
+                "the libdmumps.so library is properly linked."
             )
+        
+        self.comm: mpi_comm = comm
+        self.rank: int = self.comm.Get_rank()
+        self.comm_size: int = self.comm.size        
 
-        # initialize PardisoSolver and check license
-        mtype = -2
-        self.pardiso_solver = PardisoSolver(mtype=mtype, verbose=False)
+        # initialize MumpsSolver
+        self.mumps_solver = MumpsSolver(verbose=False, mpi_rank=self.rank, comm=self.comm)
 
         self.nnz = None
         self.n = None 
@@ -42,9 +53,9 @@ class SparsePardisoSolver(Solver):
     def cholesky(self, A: sp.sparse.spmatrix, **kwargs) -> None:
         """Compute Cholesky factor of input matrix."""
 
-        A = sp.sparse.csr_matrix(A)
-        self.pardiso_solver.factorize(sparse_matrix=A, compute_determinant=True)
-        self.nnz = self.pardiso_solver.nnz
+        A = sp.sparse.coo_matrix(A)
+        self.mumps_solver.factorize(sparse_matrix=A, compute_determinant=True)
+        self.nnz = self.mumps_solver.nnz
         self.n = A.shape[0]
 
     def solve(
@@ -54,10 +65,10 @@ class SparsePardisoSolver(Solver):
     ) -> NDArray:
         """Solve linear system using Cholesky factor."""
 
-        if self.pardiso_solver.is_factorized is False:
+        if self.mumps_solver.is_factorized is False:
             raise ValueError("Cholesky factor not computed. Please call cholesky first.")
         
-        rhs[:] = self.pardiso_solver.solve(rhs)
+        rhs[:] = self.mumps_solver.solve(rhs)
 
         return rhs
 
@@ -67,27 +78,17 @@ class SparsePardisoSolver(Solver):
     ) -> float:
         """Compute logdet of input matrix using Cholesky factor."""
 
-        if self.pardiso_solver.is_factorized is False:
+        if self.mumps_solver.is_factorized is False:
             raise ValueError("Cholesky factor not computed. Please call cholesky first.")
 
-        return self.pardiso_solver.logdet()
+        return self.mumps_solver.logdet()
 
-<<<<<<< HEAD
     def selected_inversion(self, **kwargs):
-=======
-    def selected_inversion(self, overwrite_a = False, **kwargs):
->>>>>>> 953d3bcb4615d92f863eefae6cfa693669751b2a
-        # Placeholder for the selected inversion method.
 
-        if self.pardiso_solver.is_factorized is False:
+        if self.mumps_solver.is_factorized is False:
             raise ValueError("Cholesky factor not computed. Please call cholesky first.")
-        
-<<<<<<< HEAD
-        self.a_inv = self.pardiso_solver.selected_inverse()
-=======
-        self.a_inv = self.pardiso_solver.selected_inverse(overwrite_a=overwrite_a)
->>>>>>> 953d3bcb4615d92f863eefae6cfa693669751b2a
-        return self.a_inv
+
+        self.a_inv_mat = self.mumps_solver.selected_inverse()
 
     def _structured_to_spmatrix(self,        
         sparsity_pattern: sp.sparse.spmatrix,
@@ -98,61 +99,39 @@ class SparsePardisoSolver(Solver):
         # set data entries in sparsity pattern to 1
         sparsity_pattern.data = xp.ones_like(sparsity_pattern.data, dtype=xp.float64)
         
-        # construct sparse matrix using a_inv
-        a_inv_mat = sp.sparse.csr_matrix(
-            (self.a_inv, 
-             self.pardiso_solver.ja - 1,
-             self.pardiso_solver.ia - 1,  # Convert to 0-based indexing
-             ),  # Convert to 0-based indexing
-            shape=(self.n, self.n)
-        )
-
         # Apply the sparsity pattern
-        a_inv_mat = a_inv_mat.multiply(sparsity_pattern)
+        self.a_inv_mat = self.a_inv_mat.multiply(sparsity_pattern)
 
         # Return the sparse matrix
-        return a_inv_mat
+        return self.a_inv_mat
 
-<<<<<<< HEAD
-
-
-        print("In _structured_to_spmatrix. Nothing to be done here.")
-
-=======
->>>>>>> 953d3bcb4615d92f863eefae6cfa693669751b2a
     def get_solver_memory(self) -> int:
         """Return the memory used by the solver in number of bytes"""
 
         if self.nnz is None or self.n is None:
-<<<<<<< HEAD
-            print("Matrix dimensions not known yet. Please call cholesky first.")
-=======
             print("Matrix nnz not known yet. Please call cholesky first.")
->>>>>>> 953d3bcb4615d92f863eefae6cfa693669751b2a
             return 0
         
         memory_bytes = 8 * self.nnz + 4 * (self.nnz + self.n + 1)
         return memory_bytes
 
 
-<<<<<<< HEAD
-## write test
-
-
-=======
->>>>>>> 953d3bcb4615d92f863eefae6cfa693669751b2a
 if __name__ == "__main__":
     import numpy as np
-
     from dalia.configs.dalia_config import SolverConfig
+
+    # Initialize MPI
+    comm = MPI.COMM_WORLD
+    mpi_rank = comm.Get_rank()  
+    mpi_size = comm.Get_size()
 
     # Example usage
     config = SolverConfig()
-    solver = SparsePardisoSolver(config)
-    print("SparsePardisoSolver initialized successfully.")
+    solver = SparseMumpsSolver(config, comm=comm)
+    print("SparseMumpsSolver initialized successfully.")
 
     n = 5
-    a = np.array([4.0, 1.0, 4.0, 1.0, 4.0, 1.0, 4.0, 1.0, 4.5], dtype=np.float64)
+    a = np.array([4.0, 1.0, 4.0, 1.0, 4.0, 1.0, 4.0, 1.0, 4.0], dtype=np.float64)
     ia = np.array([1, 3, 5, 7, 9, 10], dtype=np.int32)  # Row pointers (1-based)
     ja = np.array(
         [1, 2, 2, 3, 3, 4, 4, 5, 5], dtype=np.int32
@@ -189,13 +168,13 @@ if __name__ == "__main__":
 
     # Solve the linear system
     solution = solver.solve(rhs.copy())  # Use copy to preserve original rhs
-    print(f"Solution (Pardiso):     {solution}")
+    print(f"Solution (Mumps):     {solution}")
     print(f"Solution (Reference):   {solution_ref}")
     print(f"Solution difference:    {np.abs(solution - solution_ref)}")
 
     # Compute log determinant
     logdet = solver.logdet()
-    print(f"\nLog determinant (Pardiso):   {logdet:.6f}")
+    print(f"\nLog determinant (Mumps):   {logdet:.6f}")
     print(f"Log determinant (Reference): {logdet_ref:.6f}")
     print(f"Log determinant difference:  {abs(logdet - logdet_ref):.2e}")
 
@@ -203,10 +182,11 @@ if __name__ == "__main__":
     print("\n" + "-" * 60)
     print("TESTING SELECTED INVERSION")
     print("-" * 60)
-    selected_inv_result = solver.selected_inversion()
-    print(f"Selected inversion result: {selected_inv_result}")
+    solver.selected_inversion()
 
-    
+    selected_inv_result = solver._structured_to_spmatrix(A)
+    print(f"Selected inversion result:\n {selected_inv_result.toarray()}")
+
     print("\n" + "=" * 60)
     print("TESTING COMPLETED")
     print("=" * 60)

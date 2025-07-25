@@ -5,6 +5,14 @@ from dalia.configs.dalia_config import SolverConfig
 from dalia.core.solver import Solver
 
 
+## check if sparse matrix is diagonal
+def is_diagonal(A: NDArray) -> bool:
+    """Check if a matrix is diagonal."""
+
+    coo = A.tocoo()
+    return xp.all(coo.row == coo.col)
+
+
 class DenseSolver(Solver):
     def __init__(
         self,
@@ -33,7 +41,18 @@ class DenseSolver(Solver):
         self.A_inv = None
 
     def cholesky(self, A: NDArray, **kwargs) -> None:
-        self.L[:] = A.todense()
+        if sp.sparse.issparse(A):
+            # if A is diagonal, we can use the diagonal directly
+            if is_diagonal(A):
+                self.L[:] = 0
+                # self.L.diagonal()[:] = xp.sqrt(A.diagonal())
+                self.L[xp.arange(self.n), xp.arange(self.n)] = xp.sqrt(A.diagonal())
+                return
+
+            else:
+                self.L[:] = A.todense()
+        else:
+            self.L[:] = A
 
         self.L = xp.linalg.cholesky(self.L)
 
@@ -55,9 +74,7 @@ class DenseSolver(Solver):
     ) -> float:
         return 2 * xp.sum(xp.log(xp.diag(self.L)))
 
-    # TODO: optimize for memory??
     def selected_inversion(self, **kwargs) -> None:
-
         L_inv = xp.eye(self.L.shape[0])
         L_inv[:] = sp.linalg.solve_triangular(
             self.L, L_inv, lower=True, overwrite_b=True

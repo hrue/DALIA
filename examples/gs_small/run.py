@@ -60,8 +60,14 @@ if __name__ == "__main__":
 
     # Configurations of DALIA
     dalia_dict = {
+<<<<<<< HEAD
         "solver": {"type": "dense"},
         #"solver": {"type": "pardiso"},
+=======
+        #"solver": {"type": "dense"},
+        #"solver": {"type": "pardiso"},
+        "solver": {"type": "mumps"},
+>>>>>>> 953d3bcb4615d92f863eefae6cfa693669751b2a
         "minimize": {
             "max_iter": args.max_iter,
             "gtol": 1e-3,
@@ -92,19 +98,21 @@ if __name__ == "__main__":
     )
 
     print_msg("\n--- Comparisons ---")
-    # Compare hyperparameters
+    # # Compare hyperparameters
     theta_ref = np.load(f"{BASE_DIR}/reference_outputs/theta_ref.npy")
     print_msg(
         "Norm (theta - theta_ref):        ",
         f"{np.linalg.norm(results['theta'] - get_host(theta_ref)):.4e}",
     )
 
-    # Compare latent parameters
+    # # Compare latent parameters
     x_ref = np.load(f"{BASE_DIR}/reference_outputs/x_ref.npy")
     print_msg(
         "Norm (x - x_ref):                ",
         f"{np.linalg.norm(results['x'] - get_host(x_ref)):.4e}",
     )
+
+    #var_latent_params = dalia.get_marginal_variances_latent_parameters(theta=theta_ref, x_star=x_ref)
 
     # Compare marginal variances of latent parameters
     var_latent_params = results["marginal_variances_latent"]
