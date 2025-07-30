@@ -40,24 +40,24 @@ export MPI_CUDA_AWARE=0
 #                    solver. The default is 1. The maximum number of processes is
 # `--max_iter` : The maximum number of iterations of the minimization.
 
-base_dir=~
+base_dir=.
 
 # --- Run Regression Example ---
-#srun python ${base_dir}/DALIA/examples/regression/run.py --max_iter 100
+#srun python ${base_dir}/regression/run.py --max_iter 100
 
 # --- Run Spatial Examples ---
-# srun python ${base_dir}/DALIA/examples/gs_small/run.py --max_iter 100
+# srun python ${base_dir}/gs_small/run.py --max_iter 100
 
 # --- Run Spatio-temporal Examples ---
-# srun python ${base_dir}/DALIA/examples/gst_small/run.py --solver_min_p 1 --max_iter 100
-# srun python ${base_dir}/DALIA/examples/gst_medium/run.py --solver_min_p 1 --max_iter 100
-# srun python ${base_dir}/DALIA/examples/gst_large/run.py --solver_min_p 1 --max_iter 100
+srun python ${base_dir}/gst_small/run.py --solver_min_p 1 --max_iter 100
+# srun python ${base_dir}/gst_medium/run.py --solver_min_p 1 --max_iter 100
+# srun python ${base_dir}/gst_large/run.py --solver_min_p 1 --max_iter 100
 
 # --- Run Coregional (Spatial) Examples ---
-srun python ${base_dir}/DALIA/examples/gs_coreg2_small/run.py --max_iter 100
-# srun python ${base_dir}/DALIA/examples/gs_coreg3_small/run.py --max_iter 100
+# srun python ${base_dir}/gs_coreg2_small/run.py --max_iter 100
+# srun python ${base_dir}/gs_coreg3_small/run.py --max_iter 100
 
 # --- Run Coregional (Spatio-temporal) Examples ---
-# srun python ${base_dir}/DALIA/examples/gst_coreg2_small/run.py --solver_min_p 1 --max_iter 100
-# srun python ${base_dir}/DALIA/examples/gst_coreg3_small/run.py --solver_min_p 1 --max_iter 100
+# srun python ${base_dir}/gst_coreg2_small/run.py --solver_min_p 1 --max_iter 100
+# srun python ${base_dir}/gst_coreg3_small/run.py --solver_min_p 1 --max_iter 100
 
