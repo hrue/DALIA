@@ -1,5 +1,5 @@
 #!/bin/bash -l
-#SBATCH --job-name="examples"
+#SBATCH --job-name="dalia_examples"
 #SBATCH --output=%x.%j.out
 #SBATCH --error=%x.%j.err
 #SBATCH --account=sm96
@@ -15,49 +15,59 @@
 #SBATCH --uenv=prgenv-gnu/24.11:v1
 #SBATCH --view=modules
 
-set -e -u
-
-export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
-export MPICH_GPU_SUPPORT_ENABLED=1
-
-export NCCL_NET='AWS Libfabric'
-export CUDA_VISIBLE_DEVICES=$SLURM_LOCALID
-
-source ~/load_modules.sh
-conda activate allin
-
-export ARRAY_MODULE=cupy
-export MPI_CUDA_AWARE=0
+# Set DALIA environment variables for examples  
+source ../scripts/alps_environment.sh && setup_dalia_alps_environment
+source ./scripts/job_utils.sh && set_dalia_perfenv && echo_job_config
 
 # --- How to Run ---
 # This run script is designed to run on the Daint supercomputer at CSCS.
 # It uses SLURM for job scheduling and assumes that the user has a working 
 # installation of DALIA and its dependencies. By default, DALIA will exploit  
-# job parallelism at the parallel function evaluation level.
+# job parallelism in a cascade, first at the function evaluation level,
+# then at the precision matrix level, finally at the structured solver level.
 
 # --- Parameters ---
 # `--solver_min_p` : The minimum number of Processes(/GPUs) to use for the structured 
 #                    solver. The default is 1. The maximum number of processes is
 # `--max_iter` : The maximum number of iterations of the minimization.
 
-base_dir=.
+# Change to examples directory
+if [[ "$(basename "$(pwd)")" != "examples" ]]; then
+    echo "❌ Error: Not in examples directory"
+    echo "   Current directory: $(pwd)"
+    echo "   Please run this script from the examples/ directory"
+    exit 1
+fi
+
 
 # --- Run Regression Example ---
-#srun python ${base_dir}/regression/run.py --max_iter 100
+#echo "Regression Example..."
+#srun python ./regression/run.py --max_iter 100
 
 # --- Run Spatial Examples ---
-# srun python ${base_dir}/gs_small/run.py --max_iter 100
+#echo "Spatial Example (small)..."
+#srun python ./gs_small/run.py --max_iter 100
 
 # --- Run Spatio-temporal Examples ---
-srun python ${base_dir}/gst_small/run.py --solver_min_p 1 --max_iter 100
-# srun python ${base_dir}/gst_medium/run.py --solver_min_p 1 --max_iter 100
-# srun python ${base_dir}/gst_large/run.py --solver_min_p 1 --max_iter 100
+# echo "Spatio-temporal Example (small)..."
+# srun python ./gst_small/run.py --solver_min_p 1 --max_iter 100
+
+echo "Spatio-temporal Example (medium)..."
+srun python ./gst_medium/run.py --solver_min_p 1 --max_iter 100
+
+#echo "Spatio-temporal Example (large)..."
+#srun python ./gst_large/run.py --solver_min_p 1 --max_iter 100
 
 # --- Run Coregional (Spatial) Examples ---
-# srun python ${base_dir}/gs_coreg2_small/run.py --max_iter 100
-# srun python ${base_dir}/gs_coreg3_small/run.py --max_iter 100
+#echo "Coregional Spatial Example (2 models)..."
+#srun python ./gs_coreg2_small/run.py --max_iter 100
+
+#echo "Coregional Spatial Example (3 models)..."
+#srun python ./gs_coreg3_small/run.py --max_iter 100
 
 # --- Run Coregional (Spatio-temporal) Examples ---
-# srun python ${base_dir}/gst_coreg2_small/run.py --solver_min_p 1 --max_iter 100
-# srun python ${base_dir}/gst_coreg3_small/run.py --solver_min_p 1 --max_iter 100
+#echo "Coregional Spatio-temporal Example (2 models)..."
+#srun python ./gst_coreg2_small/run.py --solver_min_p 1 --max_iter 100
 
+#echo "Coregional Spatio-temporal Example (3 models)..."
+#srun python ./gst_coreg3_small/run.py --solver_min_p 1 --max_iter 100
