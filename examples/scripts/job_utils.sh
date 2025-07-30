@@ -8,7 +8,7 @@
 # Setup DALIA Performance Environment
 set_alps_perfconfig() {
 
-    set -e -
+    set -e
     export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
     export CUDA_VISIBLE_DEVICES=$SLURM_LOCALID
     export MPICH_GPU_SUPPORT_ENABLED=1
