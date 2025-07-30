@@ -21,8 +21,6 @@ class CommunicatorConfig(BaseModel):
     # - "default" will use the given comm_lib
     allreduce: Literal["default", "host_mpi", "device_mpi", "nccl", "none"] = "default"
     allgather: Literal["default", "host_mpi", "device_mpi", "nccl", "none"] = "default"
-    allgatherv: Literal["default", "host_mpi", "device_mpi", "nccl", "none"] = "default"
-    alltoall: Literal["default", "host_mpi", "device_mpi", "nccl", "none"] = "default"
     bcast: Literal["default", "host_mpi", "device_mpi", "nccl", "none"] = "default"
     reduce: Literal["default", "host_mpi", "device_mpi", "nccl", "none"] = "default"
     reduce_scatter: Literal["default", "host_mpi", "device_mpi", "nccl", "none"] = (
@@ -30,7 +28,10 @@ class CommunicatorConfig(BaseModel):
     )
     send_recv: Literal["default", "host_mpi", "device_mpi", "nccl", "none"] = "default"
 
-
+    # Collectives that are not supported by NCCL
+    allgatherv: Literal["default", "host_mpi", "device_mpi", "none"] = "default"
+    alltoall: Literal["default", "host_mpi", "device_mpi", "none"] = "default"
+    
 class FCommunicatorConfig(CommunicatorConfig):
     """
     Configuration for the communicator using the default backend.
