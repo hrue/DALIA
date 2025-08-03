@@ -206,6 +206,9 @@ class DALIA:
         # --- Metrics
         self.f_values: ArrayLike = []
         self.theta_values: ArrayLike = []
+        self.theta_star = None
+        self.x_star = None
+        self.cov_theta = None
         self.objective_function_time: ArrayLike = []
         self.solver_time: ArrayLike = []
         self.construction_time: ArrayLike = []
@@ -301,15 +304,16 @@ class DALIA:
         # compute mode of the hyperparameters theta
         minimization_result = self.minimize()
 
-        theta_star = get_device(minimization_result["theta"])
-        x_star = get_device(minimization_result["x"])
+        # store optimal theta
+        self.theta_star = get_device(minimization_result["theta"])
+        self.x_star = get_device(minimization_result["x"])
 
         # compute covariance of the hyperparameters theta at the mode
-        cov_theta = self.compute_covariance_hp(theta_star)
+        self.cov_theta = self.compute_covariance_hp(self.theta_star)
 
         # compute marginal variances of the latent parameters
         marginal_variances_latent = self.get_marginal_variances_latent_parameters(
-            theta_star, x_star
+            self.theta_star, self.x_star
         )
 
         # compute marginal variances of the observations
@@ -788,9 +792,9 @@ class DALIA:
         #     f"hessian_f: \n {hess_theta}",
         #     flush=True,
         # )
-        cov_theta = xp.linalg.inv(hess_theta)
+        self.cov_theta = xp.linalg.inv(hess_theta)
 
-        return cov_theta
+        return self.cov_theta
 
     def _evaluate_hessian_f(
         self,
@@ -941,6 +945,40 @@ class DALIA:
             print_msg(f"Negative eigenvalues detected: {eigvals}")
 
         return hess
+    
+    def marginal_distributions_hp(
+        self,
+    ) -> NDArray:
+        """Compute the marginal distributions of the hyperparameters theta.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        marginal_distributions_hp : NDArray
+            Marginal distributions of the hyperparameters theta.
+        """
+        if self.cov_theta is None:
+            raise ValueError(
+                "Covariance of the hyperparameters theta has not been computed yet."
+            )
+            
+        # theta star contains the mean (eventually VB correction)
+        marginal_variances_hp = xp.sqrt(
+            xp.diag(self.cov_theta)
+        )
+        
+        # now for each hyperparameter compute 
+        
+    def _compute_marginals_hp(self, theta_mean, theta_sd, theta_transform):
+        
+        # determine interval of interest 
+        theta_interval = xp.linspace(theta_mean - 3*theta_sd, theta_mean + 3*theta_sd, 100)
+
+        
+
 
     def _compute_covariance_latent_parameters(
         self, theta: NDArray, x_star: NDArray
