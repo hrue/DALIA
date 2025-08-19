@@ -331,7 +331,7 @@ class DALIA:
             "grad_f": minimization_result["grad_f"],
             "f_values": minimization_result["f_values"],
             "theta_values": minimization_result["theta_values"],
-            "cov_theta": cov_theta,
+            "cov_theta": self.cov_theta,
             "marginal_variances_latent": marginal_variances_latent,
             # "marginal_variances_observations": get_host(
             #     marginal_variances_observations
@@ -945,7 +945,7 @@ class DALIA:
             print_msg(f"Negative eigenvalues detected: {eigvals}")
 
         return hess
-    
+
     def marginal_distributions_hp(
         self,
     ) -> NDArray:
@@ -964,21 +964,18 @@ class DALIA:
             raise ValueError(
                 "Covariance of the hyperparameters theta has not been computed yet."
             )
-            
+
         # theta star contains the mean (eventually VB correction)
         marginal_variances_hp = xp.sqrt(
             xp.diag(self.cov_theta)
         )
-        
-        # now for each hyperparameter compute 
-        
+
+        # now for each hyperparameter compute
+
     def _compute_marginals_hp(self, theta_mean, theta_sd, theta_transform):
-        
-        # determine interval of interest 
+
+        # determine interval of interest
         theta_interval = xp.linspace(theta_mean - 3*theta_sd, theta_mean + 3*theta_sd, 100)
-
-        
-
 
     def _compute_covariance_latent_parameters(
         self, theta: NDArray, x_star: NDArray
