@@ -215,6 +215,7 @@ class DALIA:
         self.t_construction_qconditional = 0.0
         self.solver.t_cholesky = 0.0
         self.solver.t_solve = 0.0
+        self.t_covariance_hp = 0.0
         
         self._print_init()
 
@@ -758,10 +759,18 @@ class DALIA:
             Covariance matrix of the hyperparameters theta.
         """
         self.model.theta[:] = theta_i
+        
+        synchronize_gpu()
+        tic = time.perf_counter()
 
         hess_theta = self._evaluate_hessian_f(theta_i)
         cov_theta = xp.linalg.inv(hess_theta)
 
+        synchronize_gpu()
+        toc = time.perf_counter()
+        self.t_covariance_hp += toc - tic
+        print_msg("Time to compute covariance of hyperparameters:", self.t_covariance_hp, flush=True)
+        
         return cov_theta
 
     def _evaluate_hessian_f(
